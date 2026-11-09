@@ -12,13 +12,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   catch (e) { return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 500 }); }
 }
 
-type Body = { ws?: string; action: "approve" | "revise" | "reply" | "done" | "rename" | "rerun"; text?: string; link?: string };
+type Body = { ws?: string; files?: string[]; action: "approve" | "revise" | "reply" | "done" | "rename" | "rerun"; text?: string; link?: string };
 
 /** Aksi dari kantor. Setiap aksi ditulis ke Multica atas nama pemilik token. */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const body = (await req.json()) as Body;
   const text = (body.text ?? "").trim();
+  const files = body.files ?? [];
   try {
     const ws = body.ws ?? null;
     const { issue } = await issueDetail(id, ws);
@@ -29,27 +30,27 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     switch (body.action) {
       case "approve":
         // Komentar persetujuan tidak membangunkan agen (hemat token), lalu task ditutup.
-        await addComment(ws, id, `✅ Disetujui oleh ${who} lewat Kantor Virtual.${text ? `\n\n${text}` : ""}`, quiet);
+        await addComment(ws, id, `✅ Disetujui oleh ${who} lewat Kantor Virtual.${text ? `\n\n${text}` : ""}`, quiet, files);
         await updateIssue(ws, id, { status: "done" });
         break;
       case "revise":
-        if (!text) return NextResponse.json({ error: "Catatan revisi masih kosong." }, { status: 400 });
+        if (!text && !files.length) return NextResponse.json({ error: "Catatan revisi masih kosong." }, { status: 400 });
         // Komentar biasa membangunkan agen yang ditugaskan; status kembali ke antrean.
         if (closed) {
-          await addComment(ws, id, `✏️ Minta revisi:\n\n${text}`, quiet);
+          await addComment(ws, id, `✏️ Minta revisi:\n\n${text}`, quiet, files);
           await parkIssue(ws, id, "todo");
         } else {
-          await addComment(ws, id, `✏️ Minta revisi:\n\n${text}`);
+          await addComment(ws, id, `✏️ Minta revisi:\n\n${text}`, [], files);
           await updateIssue(ws, id, { status: "todo" });
         }
         break;
       case "reply":
-        if (!text) return NextResponse.json({ error: "Pesannya masih kosong." }, { status: 400 });
-        if (closed) { await addComment(ws, id, text, quiet); await parkIssue(ws, id, issue.status === "in_progress" ? "in_progress" : "todo"); }
-        else await addComment(ws, id, text);
+        if (!text && !files.length) return NextResponse.json({ error: "Pesannya masih kosong." }, { status: 400 });
+        if (closed) { await addComment(ws, id, text, quiet, files); await parkIssue(ws, id, issue.status === "in_progress" ? "in_progress" : "todo"); }
+        else await addComment(ws, id, text, [], files);
         break;
       case "done":
-        await addComment(ws, id, `✅ Sudah dikerjakan oleh ${who}.${body.link ? `\n\nLink: ${body.link}` : ""}${text ? `\n\n${text}` : ""}`, quiet);
+        await addComment(ws, id, `✅ Sudah dikerjakan oleh ${who}.${body.link ? `\n\nLink: ${body.link}` : ""}${text ? `\n\n${text}` : ""}`, quiet, files);
         await updateIssue(ws, id, { status: "done" });
         break;
       case "rerun":

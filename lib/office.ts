@@ -18,6 +18,7 @@ export type Office = {
   workspace: string; workspaceId: string; workspaceSlug: string; today: string; updatedAt: string; open: boolean;
   switchOpen: boolean; parked: number; changedBy: string | null;
   alerts: string[];
+  seen: Record<string, string>;
   runtimes: { name: string; provider: string; online: boolean; lastSeen: string }[];
   rooms: Room[]; idleDesks: Desk[];
   attention: { overdue: TaskView[]; human: TaskView[]; review: TaskView[]; failed: RunView[] };
@@ -177,7 +178,17 @@ export function buildOffice(s: Snapshot): Office {
     .map(a => makeDesk(a, agentIssues.filter(i => i.assignee_id === a.id && !i.project_id)));
 
   const allViews = open.map(view);
-  const failed = s.runs.filter(r => r.status === "failed" && Date.now() - Date.parse(r.created_at) < 86400000 * 7)
+  // Gagal hanya ditampilkan kalau itu kejadian terakhir untuk task tersebut dan task-nya masih terbuka.
+  const latestByIssue = new Map<string, Run>();
+  for (const r of s.runs) {
+    if (!r.issue_id) continue;
+    const cur = latestByIssue.get(r.issue_id);
+    if (!cur || Date.parse(r.created_at) > Date.parse(cur.created_at)) latestByIssue.set(r.issue_id, r);
+  }
+  const openIds = new Set(open.map(i => i.id));
+  const failed = [...latestByIssue.values()]
+    .filter(r => r.status === "failed" && openIds.has(r.issue_id!) && issueById.get(r.issue_id!)?.status !== "in_review"
+      && Date.now() - Date.parse(r.created_at) < 86400000 * 7)
     .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)).slice(0, 8).map(runView);
 
   const agentsDetail: Office["agentsDetail"] = {};
@@ -194,12 +205,14 @@ export function buildOffice(s: Snapshot): Office {
     switchOpen, parked: s.issues.filter(i => (i.metadata ?? {}).kantor_parked && i.status === "backlog").length,
     changedBy: s.kantor.changedBy ?? null,
     alerts: loginAlerts(s),
+    seen: s.seen ?? {},
     runtimes: s.runtimes.map(r => ({ name: r.provider === "claude" ? "Claude" : r.provider === "codex" ? "GPT (Codex)" : r.name, provider: r.provider, online: r.status === "online", lastSeen: relTime(r.last_seen_at, tz) })),
     rooms, idleDesks,
     attention: {
-      overdue: sortTasks(allViews.filter(t => t.dueFlag)),
+      // Setiap task hanya muncul di satu bagian, supaya daftar tidak dobel.
       human: sortTasks(allViews.filter(t => t.assigneeType === "member")),
-      review: sortTasks(allViews.filter(t => t.status === "in_review")),
+      review: sortTasks(allViews.filter(t => t.status === "in_review" && t.assigneeType !== "member")),
+      overdue: sortTasks(allViews.filter(t => t.dueFlag && t.assigneeType !== "member" && t.status !== "in_review")),
       failed,
     },
     people: [...new Set(s.members.map(m => m.name))],

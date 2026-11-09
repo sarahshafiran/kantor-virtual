@@ -22,7 +22,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ w
       failed: offices.flatMap(o => o.attention.failed),
     };
     const people = [...new Set(offices.flatMap(o => o.people))];
-    return <OfficeView office={current} buildings={buildings} attention={merged} people={people} />;
+    // Kapan terakhir tiap orang membuka kantor (diambil yang paling baru dari semua gedung).
+    const seen: Record<string, string> = {};
+    for (const o of offices) for (const [n, t] of Object.entries(o.seen)) if (!seen[n] || t > seen[n]) seen[n] = t;
+    return <OfficeView office={current} buildings={buildings} attention={merged} people={people} seen={seen} />;
   } catch (e) {
     return (
       <main className="wrap" style={{ paddingBlock: 40 }}>

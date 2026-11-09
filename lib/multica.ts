@@ -93,9 +93,40 @@ export async function issueDetail(id: string, wsPick?: string | null) {
   return { issue, comments, attachments, me };
 }
 
-export async function addComment(wsPick: string | null | undefined, issueId: string, content: string, suppressAgentIds: string[] = []) {
+export async function addComment(wsPick: string | null | undefined, issueId: string, content: string, suppressAgentIds: string[] = [], attachmentIds: string[] = []) {
   const ws = await workspace(wsPick);
-  return call("POST", `/api/issues/${issueId}/comments`, ws.id, { content, type: "comment", suppress_agent_ids: suppressAgentIds });
+  return call("POST", `/api/issues/${issueId}/comments`, ws.id, { content, type: "comment", suppress_agent_ids: suppressAgentIds, attachment_ids: attachmentIds });
+}
+
+/** Run yang sedang berjalan / antre untuk satu task. */
+export async function activeRuns(wsPick: string | null | undefined, issueId: string) {
+  const ws = await workspace(wsPick);
+  return get<unknown>(`/api/issues/${issueId}/active-task`, ws.id).then(d => list<Run>(d, "tasks")).catch(() => [] as Run[]);
+}
+
+/** Unggah satu file ke Multica (opsional langsung ke sebuah task). */
+export async function uploadFile(wsPick: string | null | undefined, file: File, issueId?: string) {
+  const ws = await workspace(wsPick);
+  const form = new FormData();
+  form.append("file", file, file.name);
+  if (issueId) form.append("issue_id", issueId);
+  const res = await fetch(API + "/api/upload-file", { method: "POST", headers: { Authorization: `Bearer ${token()}`, "X-Workspace-ID": ws.id }, body: form });
+  if (!res.ok) throw new Error(`Unggah ${file.name} gagal (${res.status}) ${(await res.text().catch(() => "")).slice(0, 150)}`);
+  return res.json() as Promise<{ id: string; filename: string; url: string }>;
+}
+
+/** Siapa yang sedang membuka kantor (detak tiap beberapa menit, disimpan di pengaturan workspace). */
+export async function heartbeat(wsPick: string | null | undefined, name: string) {
+  const ws = await workspace(wsPick);
+  const full = await get<{ settings?: Record<string, unknown> | null }>(`/api/workspaces/${ws.id}`, ws.id);
+  const settings = { ...(full.settings ?? {}) } as Record<string, unknown>;
+  settings.kantor_presence = { ...((settings.kantor_presence as Record<string, string>) ?? {}), [name]: new Date().toISOString() };
+  return call("PATCH", `/api/workspaces/${ws.id}`, ws.id, { settings });
+}
+export async function presence(wsPick?: string | null): Promise<Record<string, string>> {
+  const ws = await workspace(wsPick);
+  const full = await get<{ settings?: Record<string, unknown> | null }>(`/api/workspaces/${ws.id}`, ws.id);
+  return ((full.settings ?? {}).kantor_presence as Record<string, string>) ?? {};
 }
 export async function updateIssue(wsPick: string | null | undefined, issueId: string, patch: Record<string, unknown>) {
   const ws = await workspace(wsPick);
@@ -145,8 +176,11 @@ export async function loadWorkspace(wsPick?: string | null) {
   const runs = (await Promise.all(
     dir.agents.map(a => get<unknown>(`/api/agents/${a.id}/tasks?limit=20`, id).then(d => list<Run>(d, "tasks")).catch(() => [] as Run[]))
   )).flat();
-  const kantor = await kantorSettings(id).catch(() => ({} as KantorSettings));
-  return { ...dir, workspace: ws, issues, runs, kantor };
+  const [kantor, seen] = await Promise.all([
+    kantorSettings(id).catch(() => ({} as KantorSettings)),
+    presence(id).catch(() => ({} as Record<string, string>)),
+  ]);
+  return { ...dir, workspace: ws, issues, runs, kantor, seen };
 }
 export type Snapshot = Awaited<ReturnType<typeof loadWorkspace>>;
 

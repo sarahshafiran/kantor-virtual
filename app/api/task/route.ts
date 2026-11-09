@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /** Beri task baru ke worker. */
 export async function POST(req: Request) {
-  const b = (await req.json()) as { ws?: string; agentId: string; title: string; detail?: string; due?: string; projectId?: string; now?: boolean };
+  const b = (await req.json()) as { files?: string[]; ws?: string; agentId: string; title: string; detail?: string; due?: string; projectId?: string; now?: boolean };
   if (!b.title?.trim()) return NextResponse.json({ error: "Judul task masih kosong." }, { status: 400 });
   try {
     const closed = (await kantorSettings(b.ws ?? null)).open === false;
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
       assignee_id: b.agentId,
       project_id: b.projectId || null,
       due_date: b.due || null,
+      attachment_ids: b.files?.length ? b.files : undefined,
     });
     // Kantor tutup: task diparkir dan otomatis dikerjakan saat kantor dibuka.
     if (closed && b.now !== false) await setIssueMeta(b.ws ?? null, created.id, PARK_KEY, "todo");

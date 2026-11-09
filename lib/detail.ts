@@ -1,6 +1,6 @@
 // Detail satu task dalam bahasa sehari-hari: siapa, sedang apa, apa yang perlu kamu lakukan.
 import "server-only";
-import { issueDetail, loadDirectory } from "./multica";
+import { issueDetail, loadDirectory, activeRuns, kantorSettings } from "./multica";
 import { friendlyTitle } from "./titles";
 
 export type Message = {
@@ -13,6 +13,7 @@ export type TaskDetail = {
   due: string | null; dueText: string | null; dueFlag: "late" | "risk" | null;
   assignee: { kind: "agent" | "member" | null; id: string | null; name: string | null; emoji: string | null; online: boolean };
   brief: string; messages: Message[]; me: string;
+  live: { state: "running" | "queued" | "waiting" | "idle"; label: string };
 };
 
 const isImage = (f: { filename: string; content_type?: string }) =>
@@ -20,7 +21,7 @@ const isImage = (f: { filename: string; content_type?: string }) =>
 
 export async function buildDetail(id: string, wsPick?: string | null): Promise<TaskDetail> {
   const tz = process.env.KANTOR_TIMEZONE || "Asia/Jakarta";
-  const [{ issue, comments, attachments, me }, snap] = await Promise.all([issueDetail(id, wsPick), loadDirectory(wsPick)]);
+  const [{ issue, comments, attachments, me }, snap, runs, kantor] = await Promise.all([issueDetail(id, wsPick), loadDirectory(wsPick), activeRuns(wsPick, id), kantorSettings(wsPick).catch(() => ({ open: true }))]);
   const agent = issue.assignee_type === "agent" ? snap.agents.find(a => a.id === issue.assignee_id) : undefined;
   const member = issue.assignee_type === "member" ? snap.members.find(m => m.id === issue.assignee_id || m.user_id === issue.assignee_id) : undefined;
   const runtime = agent ? snap.runtimes.find(r => r.id === agent.runtime_id) : undefined;
@@ -70,7 +71,20 @@ export async function buildDetail(id: string, wsPick?: string | null): Promise<T
   else if (issue.status === "todo") { mode = "working"; situation = `Ada di antrean ${aName}, siap dikerjakan.`; }
   else { mode = "working"; situation = `Masih di backlog ${aName}, belum waktunya dikerjakan.`; }
 
+  // Apa yang sedang terjadi sekarang pada task ini (untuk tanda proses di layar).
+  const running = runs.find(r => ["running", "dispatched", "started", "preparing", "in_progress"].includes(r.status));
+  const queued = runs.find(r => r.status === "queued");
+  const aN = agent?.name ?? "Worker";
+  let live: TaskDetail["live"];
+  if (running) live = { state: "running", label: `${aN} sedang mengerjakan…` };
+  else if (queued && kantor.open === false) live = { state: "waiting", label: "🔒 Kantor tutup. Dikerjakan saat kantor dibuka." };
+  else if (queued && runtime?.status !== "online") live = { state: "waiting", label: "🌙 Laptop mati. Dikerjakan saat laptop menyala." };
+  else if (queued) live = { state: "queued", label: `${aN} akan segera mengerjakan (antre)…` };
+  else if (issue.status === "backlog" && (issue.metadata ?? {}).kantor_parked) live = { state: "waiting", label: "🔒 Menunggu kantor dibuka." };
+  else live = { state: "idle", label: "" };
+
   return {
+    live,
     id: issue.id, title: friendlyTitle(issue), originalTitle: issue.title, key: issue.identifier,
     project: snap.projects.find(p => p.id === issue.project_id)?.title ?? null,
     url: `${process.env.MULTICA_APP_URL || "https://multica.ai"}/${snap.workspace.slug}/issues/${issue.identifier}`,

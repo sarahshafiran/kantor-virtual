@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Office, Desk, TaskView, RunView } from "@/lib/office";
 import TaskPanel from "./task-panel";
 import type { Building } from "./page";
 import OfficeSwitch from "./office-switch";
+import FilePicker, { uploadAll } from "./file-picker";
 
 const REFRESH_MS = 30_000;
 
@@ -15,6 +16,13 @@ function Avatar({ d, home }: { d: Desk; home?: boolean }) {
       <span className="status-dot" />
     </span>
   );
+}
+
+function Presence({ name, at }: { name: string; at?: string }) {
+  const mins = at ? (Date.now() - Date.parse(at)) / 60000 : Infinity;
+  const on = mins < 5;
+  const label = on ? "online" : !at ? "belum pernah buka" : mins < 60 ? `${Math.round(mins)} mnt lalu` : mins < 1440 ? `${Math.round(mins / 60)} jam lalu` : `${Math.round(mins / 1440)} hari lalu`;
+  return <span className={`who-chip ${on ? "on" : ""}`} title={`${name}: ${label}`}><i />{name} <small>{label}</small></span>;
 }
 
 function DueChip({ t }: { t: TaskView }) {
@@ -84,10 +92,12 @@ function NewTaskForm({ ws, desk, projects, onDone }: { ws: string; desk: Desk; p
   const [title, setTitle] = useState(""); const [detail, setDetail] = useState("");
   const [due, setDue] = useState(""); const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   async function submit(now: boolean) {
     setBusy(true); setErr(null);
     try {
-      const r = await fetch("/api/task", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ws, agentId: desk.agentId, title, detail, due, projectId, now }) });
+      const fileIds = files.length ? await uploadAll(files, ws) : [];
+      const r = await fetch("/api/task", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ws, agentId: desk.agentId, title, detail, due, projectId, now, files: fileIds }) });
       const j = await r.json(); if (j.error) throw new Error(j.error);
       onDone(j.id);
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
@@ -96,7 +106,9 @@ function NewTaskForm({ ws, desk, projects, onDone }: { ws: string; desk: Desk; p
     <form className="newtask" onSubmit={e => { e.preventDefault(); submit(true); }}>
       <label htmlFor="nt-title" className="sect">Task baru untuk {desk.name}</label>
       <input id="nt-title" className="input" placeholder="Contoh: Tulis 3 ide caption untuk teaser Instagram" value={title} onChange={e => setTitle(e.target.value)} />
-      <textarea id="nt-detail" placeholder="Detail atau arahan (opsional)" value={detail} onChange={e => setDetail(e.target.value)} />
+      <textarea id="nt-detail" placeholder="Detail atau arahan (opsional)" value={detail} onChange={e => setDetail(e.target.value)}
+        onPaste={e => { const p = [...e.clipboardData.files]; if (p.length) { e.preventDefault(); setFiles([...files, ...p]); } }} />
+      <FilePicker files={files} onChange={setFiles} />
       <div className="chiprow">
         <label className="desc" htmlFor="nt-due">Tenggat</label><input id="nt-due" className="input" type="date" value={due} onChange={e => setDue(e.target.value)} style={{ width: "auto" }} />
         <label className="desc" htmlFor="nt-proj">Ruangan</label>
@@ -108,14 +120,16 @@ function NewTaskForm({ ws, desk, projects, onDone }: { ws: string; desk: Desk; p
       <div className="row">
         <button type="button" className="btn" onClick={() => onDone(null)}>Batal</button>
         <button type="button" className="btn" disabled={!title.trim() || busy} onClick={() => submit(false)}>Simpan untuk nanti</button>
-        <button className="btn primary" disabled={!title.trim() || busy}>{busy ? "Menyimpan…" : "Kerjakan sekarang"}</button>
+        <button className="btn primary" disabled={!title.trim() || busy}>{busy ? <><span className="spinner sm" /> Menyimpan…</> : "Kerjakan sekarang"}</button>
       </div>
     </form>
   );
 }
 
-export default function OfficeView({ office, buildings, attention, people }: { office: Office; buildings: Building[]; attention: Office["attention"]; people: string[] }) {
+export default function OfficeView({ office, buildings, attention, people, seen }: { office: Office; buildings: Building[]; attention: Office["attention"]; people: string[]; seen: Record<string, string> }) {
   const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
+  const refresh = useCallback(() => startRefresh(() => router.refresh()), [router]);
   const [openDesk, setOpenDesk] = useState<Desk | null>(null);
   const [openTask, setOpenTaskRaw] = useState<{ id: string; ws: string } | null>(null);
   const setOpenTask = (id: string | null, ws: string = office.workspaceId) => setOpenTaskRaw(id ? { id, ws } : null);
@@ -124,21 +138,28 @@ export default function OfficeView({ office, buildings, attention, people }: { o
   const [person, setPerson] = useState<string>("Semua");
   const [toast, setToast] = useState<string | null>(null);
   const [rerunning, setRerunning] = useState<string | null>(null);
+  // Tandai "aku sedang online" tiap 2 menit selama tab ini terbuka dan terlihat.
+  useEffect(() => {
+    const beat = () => { if (document.visibilityState === "visible") fetch("/api/presence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ws: office.workspaceId }) }).catch(() => {}); };
+    beat(); const t = setInterval(beat, 120_000);
+    document.addEventListener("visibilitychange", beat);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", beat); };
+  }, [office.workspaceId]);
   async function rerun(f: RunView) {
     setRerunning(f.id);
     try {
       const r = await fetch(`/api/task/${f.issueId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ws: f.ws, action: "rerun" }) });
       const j = await r.json(); if (j.error) throw new Error(j.error);
-      setToast(`${f.agent} mencoba lagi: ${f.issueTitle ?? "task"}`); router.refresh();
+      setToast(`${f.agent} mencoba lagi: ${f.issueTitle ?? "task"}`); refresh();
     } catch (e) { setToast("Gagal menjalankan ulang: " + (e instanceof Error ? e.message : String(e))); }
     finally { setRerunning(null); }
   }
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 6000); return () => clearTimeout(t); }, [toast]);
 
   useEffect(() => {
-    const t = setInterval(() => router.refresh(), REFRESH_MS);
+    const t = setInterval(refresh, REFRESH_MS);
     return () => clearInterval(t);
-  }, [router]);
+  }, [refresh]);
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") { if (openTask) setOpenTask(null); else setOpenDesk(null); } };
     addEventListener("keydown", k); return () => removeEventListener("keydown", k);
@@ -166,11 +187,12 @@ export default function OfficeView({ office, buildings, attention, people }: { o
           </div>
           <div className="chiprow">
             <OfficeSwitch key={office.workspaceId + String(office.switchOpen)} ws={office.workspaceId} name={office.workspace} switchOpen={office.switchOpen} laptopOn={office.open} parked={office.parked}
-              onDone={msg => { setToast(msg); router.refresh(); }} />
+              onDone={msg => { setToast(msg); refresh(); }} />
             {office.runtimes.map(r => (
               <span key={r.name} className={`rt ${r.online ? "on" : ""}`} title={`Terakhir terlihat ${r.lastSeen}`}><i />{r.name}</span>
             ))}
-            <span className="clock">Diperbarui {office.updatedAt}</span>
+            <span className="people" aria-label="Siapa yang online">{people.map(p => <Presence key={p} name={p} at={seen[p]} />)}</span>
+            <span className="clock">{refreshing ? <><span className="spinner sm" /> Memperbarui…</> : `Diperbarui ${office.updatedAt}`}</span>
           </div>
         </div>
       </header>
@@ -244,7 +266,7 @@ export default function OfficeView({ office, buildings, attention, people }: { o
           <div className="dbody">
             <div className="note"><span>{openDesk.bubble}</span></div>
             {adding ? (
-              <NewTaskForm ws={office.workspaceId} desk={openDesk} projects={office.projects} onDone={id => { setAdding(false); router.refresh(); if (id) setOpenTask(id); }} />
+              <NewTaskForm ws={office.workspaceId} desk={openDesk} projects={office.projects} onDone={id => { setAdding(false); refresh(); if (id) setOpenTask(id); }} />
             ) : (
               <button className="btn primary" onClick={() => setAdding(true)}>+ Beri task baru</button>
             )}
@@ -266,7 +288,7 @@ export default function OfficeView({ office, buildings, attention, people }: { o
       )}
 
       {toast && <div className="toast" role="status">{toast}</div>}
-      {openTask && <TaskPanel id={openTask.id} ws={openTask.ws} onClose={() => setOpenTask(null)} onChanged={() => router.refresh()} />}
+      {openTask && <TaskPanel id={openTask.id} ws={openTask.ws} onClose={() => setOpenTask(null)} onChanged={refresh} />}
     </>
   );
 }
