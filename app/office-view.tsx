@@ -201,7 +201,9 @@ export default function OfficeView({ office, buildings, attention, people, seen 
             <span className="hgroup" aria-label="Mesin AI">
               <span className="hlabel">Mesin AI</span>
               {office.runtimes.map(r => (
-                <span key={r.name} className={`rt ${r.online ? "on" : ""}`} title={r.online ? `${r.name} siap bekerja` : `Laptop mati · terakhir terlihat ${r.lastSeen}`}>🤖 {r.name} <small>{r.online ? "siap" : "mati"}</small></span>
+                <span key={r.name} className={`rt ${r.quotaOut ? "brk" : r.online ? "on" : ""}`}
+                  title={r.quotaOut ? `Kuota ${r.name} habis${r.quotaReset ? `, reset sekitar ${r.quotaReset}` : ""}. Task dilanjutkan otomatis.` : r.online ? `${r.name} siap bekerja` : `Laptop mati · terakhir terlihat ${r.lastSeen}`}>
+                  🤖 {r.name} <small>{r.quotaOut ? `☕ kuota habis${r.quotaReset ? ` · reset ${r.quotaReset}` : ""}` : r.online ? "siap" : "mati"}</small></span>
               ))}
             </span>
             <span className="hgroup" aria-label="Tim">
@@ -220,7 +222,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
             <span><i className="dot" style={{ background: "var(--attn)" }} />Menunggu review</span>
             <span><i className="dot" style={{ background: "var(--todo)" }} />Siap mengerjakan</span>
             <span><i className="dot" style={{ background: "#C2412D" }} />Gagal</span>
-            <span>🏠 Pulang</span><span>🔒 Kantor tutup</span><span>🌙 Laptop mati</span><span>🔴 Telat · 🟠 Berisiko</span>
+            <span>☕ Istirahat (kuota AI habis)</span><span>🏠 Pulang</span><span>🔒 Kantor tutup</span><span>🌙 Laptop mati</span><span>🔴 Telat · 🟠 Berisiko</span>
           </div>
 
           {office.alerts.map(a => <div key={a} className="alert" role="alert">⚠️ {a}</div>)}

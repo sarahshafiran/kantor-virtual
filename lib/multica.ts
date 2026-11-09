@@ -266,3 +266,4 @@ export async function fileRaw(wsPick: string | null | undefined, id: string) {
   const ws = await workspace(wsPick);
   return fetch(`${API}/api/attachments/${id}/download`, { headers: { Authorization: `Bearer ${token()}`, "X-Workspace-ID": ws.id }, cache: "no-store", redirect: "follow" });
 }
+export const call_ = call;

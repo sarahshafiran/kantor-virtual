@@ -319,3 +319,7 @@ a.btn{text-decoration:none;display:inline-block}
 .chatbar{display:flex;gap:8px;align-items:center;padding:10px 20px;border-bottom:1px solid var(--line)}
 .chatbar select{flex:1;min-width:0}
 .proceed{background:var(--accent-soft);border-radius:8px;padding:6px 8px}
+.rt.brk{background:var(--brk-soft);border-color:var(--brk)}
+.rt.brk small{color:var(--brk);font-weight:600}
+.bubble.break{--b:var(--brk-soft);--bl:var(--brk);background:var(--b);border-color:var(--bl)}
+.st-break .status-dot{background:var(--brk)}

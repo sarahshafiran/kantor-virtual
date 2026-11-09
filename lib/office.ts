@@ -1,13 +1,14 @@
 // Mengubah data Multica menjadi "kantor": ruangan, meja, status worker, dan daftar yang perlu perhatian.
 import type { Snapshot, Issue, Run, Agent } from "./multica";
 import { friendlyTitle } from "./titles";
+import { quotaStates, fmtTime } from "./quota";
 
 export type Due = "late" | "risk" | null;
 export type TaskView = {
   id: string; key: string; title: string; status: string; statusLabel: string; due: string | null; dueFlag: Due;
   dueText: string | null; url: string; ws: string; wsName: string; assignee: string | null; assigneeType: "agent" | "member" | null; project: string | null;
 };
-export type DeskState = "working" | "failed" | "review" | "ready" | "home" | "off" | "closed";
+export type DeskState = "working" | "failed" | "review" | "ready" | "home" | "off" | "closed" | "break";
 export type Desk = {
   agentId: string; name: string; emoji: string | null; avatar: string | null; description: string;
   runtime: string; state: DeskState; bubble: string; reviewCount: number; lateCount: number; riskCount: number; tasks: TaskView[];
@@ -19,7 +20,7 @@ export type Office = {
   switchOpen: boolean; parked: number; changedBy: string | null;
   alerts: string[];
   seen: Record<string, string>;
-  runtimes: { name: string; provider: string; online: boolean; lastSeen: string }[];
+  runtimes: { name: string; provider: string; online: boolean; lastSeen: string; quotaReset: string | null; quotaOut: boolean }[];
   rooms: Room[]; idleDesks: Desk[];
   attention: { overdue: TaskView[]; human: TaskView[]; review: TaskView[]; failed: RunView[] };
   people: string[];
@@ -55,7 +56,7 @@ const imgOf = (a: Agent) => (a.avatar_url && /^https?:/.test(a.avatar_url) ? a.a
 function shortError(e: string | null) {
   if (!e) return "alasan tidak diketahui";
   if (/oauth|authenticat|login/i.test(e)) return "login Claude/GPT di laptop kedaluwarsa";
-  if (/rate|limit|quota|usage/i.test(e)) return "kuota AI habis";
+  if (/rate|limit|quota|usage/i.test(e)) { const m = e.match(/resets?\s+([^()]+?)\s*(\(|$)/i); return `kuota AI habis${m ? ` · reset ${m[1].trim()}` : ""} · dilanjutkan otomatis`; }
   if (/offline|heartbeat/i.test(e)) return "laptop mati saat bekerja";
   return e.length > 60 ? e.slice(0, 57) + "…" : e;
 }
@@ -86,6 +87,7 @@ export function buildOffice(s: Snapshot): Office {
 
   const open = s.issues.filter(i => !isClosed(i));
   const switchOpen = s.kantor.open !== false;
+  const quota = new Map(quotaStates(s).map(q => [q.runtimeId, q]));
 
   const view = (i: Issue): TaskView => {
     let dueFlag: Due = null, dueText: string | null = null;
@@ -134,6 +136,12 @@ export function buildOffice(s: Snapshot): Office {
     const parkedMine = mine.filter(i => (i.metadata ?? {}).kantor_parked).length;
     if (!switchOpen && !active) { state = "closed"; bubble = parkedMine ? `🔒 Kantor tutup · ${parkedMine} task menunggu` : "🔒 Kantor tutup"; }
     else if (!online) { state = "off"; bubble = "🌙 Laptop mati · lanjut saat menyala"; }
+    else if (!active && quota.has(a.runtime_id)) {
+      const q = quota.get(a.runtime_id)!;
+      const past = q.resetAt && Date.parse(q.resetAt) <= Date.now();
+      state = "break";
+      bubble = q.resetAt ? (past ? "☕ Kuota pulih · segera lanjut otomatis" : `☕ Istirahat · kuota reset ${fmtTime(new Date(q.resetAt))}`) : "☕ Istirahat · kuota AI habis";
+    }
     else if (active) { state = "working"; const ai = issueById.get(active.issue_id || ""); bubble = "Mengerjakan: " + (ai ? friendlyTitle(ai) : "tugas"); }
     else if (last?.status === "failed" && Date.now() - Date.parse(last.created_at) < 86400000 * 3) { state = "failed"; bubble = "⚠️ Gagal: " + shortError(last.error); }
     else if (review.length) { state = "review"; bubble = `Menunggu review-mu (${review.length})`; }
@@ -206,7 +214,11 @@ export function buildOffice(s: Snapshot): Office {
     changedBy: s.kantor.changedBy ?? null,
     alerts: loginAlerts(s),
     seen: s.seen ?? {},
-    runtimes: s.runtimes.map(r => ({ name: r.provider === "claude" ? "Claude" : r.provider === "codex" ? "GPT (Codex)" : r.name, provider: r.provider, online: r.status === "online", lastSeen: relTime(r.last_seen_at, tz) })),
+    runtimes: s.runtimes.map(r => {
+      const q = quota.get(r.id);
+      return { name: r.provider === "claude" ? "Claude" : r.provider === "codex" ? "GPT (Codex)" : r.name, provider: r.provider, online: r.status === "online", lastSeen: relTime(r.last_seen_at, tz),
+        quotaOut: !!q, quotaReset: q?.resetAt ? fmtTime(new Date(q.resetAt)) : null };
+    }),
     rooms, idleDesks,
     attention: {
       // Setiap task hanya muncul di satu bagian, supaya daftar tidak dobel.
