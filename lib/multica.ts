@@ -145,6 +145,49 @@ export async function loadWorkspace(wsPick?: string | null) {
   const runs = (await Promise.all(
     dir.agents.map(a => get<unknown>(`/api/agents/${a.id}/tasks?limit=20`, id).then(d => list<Run>(d, "tasks")).catch(() => [] as Run[]))
   )).flat();
-  return { ...dir, workspace: ws, issues, runs };
+  const kantor = await kantorSettings(id).catch(() => ({} as KantorSettings));
+  return { ...dir, workspace: ws, issues, runs, kantor };
 }
 export type Snapshot = Awaited<ReturnType<typeof loadWorkspace>>;
+
+// ---- Buka/Tutup kantor ----
+export type KantorSettings = {
+  open?: boolean; changedAt?: string; changedBy?: string;
+  pausedAutopilots?: string[];
+};
+type WorkspaceFull = Workspace & { settings?: Record<string, unknown> | null };
+
+export async function kantorSettings(wsPick?: string | null): Promise<KantorSettings> {
+  const ws = await workspace(wsPick);
+  const full = await get<WorkspaceFull>(`/api/workspaces/${ws.id}`, ws.id);
+  return ((full.settings ?? {}) as Record<string, unknown>).kantor as KantorSettings ?? {};
+}
+/** Simpan status kantor di pengaturan workspace (digabung, pengaturan lain tidak disentuh). */
+export async function saveKantorSettings(wsPick: string | null | undefined, k: KantorSettings) {
+  const ws = await workspace(wsPick);
+  const full = await get<WorkspaceFull>(`/api/workspaces/${ws.id}`, ws.id);
+  const settings = { ...(full.settings ?? {}), kantor: k };
+  return call("PATCH", `/api/workspaces/${ws.id}`, ws.id, { settings });
+}
+
+export type Autopilot = { id: string; title: string; status: string };
+export async function autopilots(wsPick?: string | null) {
+  const ws = await workspace(wsPick);
+  return get<unknown>("/api/autopilots", ws.id).then(d => list<Autopilot>(d, "autopilots"));
+}
+export async function setAutopilotStatus(wsPick: string | null | undefined, id: string, status: "active" | "paused") {
+  const ws = await workspace(wsPick);
+  return call("PATCH", `/api/autopilots/${id}`, ws.id, { status });
+}
+export async function rerunIssue(wsPick: string | null | undefined, issueId: string) {
+  const ws = await workspace(wsPick);
+  return call("POST", `/api/issues/${issueId}/rerun`, ws.id, {});
+}
+export async function cancelRun(wsPick: string | null | undefined, issueId: string, taskId: string) {
+  const ws = await workspace(wsPick);
+  return call("POST", `/api/issues/${issueId}/tasks/${taskId}/cancel`, ws.id, {});
+}
+export async function deleteIssueMeta(wsPick: string | null | undefined, issueId: string, key: string) {
+  const ws = await workspace(wsPick);
+  return call("DELETE", `/api/issues/${issueId}/metadata/${encodeURIComponent(key)}`, ws.id);
+}

@@ -253,3 +253,12 @@ a.btn{text-decoration:none;display:inline-block}
 .bld{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink);font-size:13px;font-weight:600;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--sunk)}
 .bld[aria-current="page"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .bld .count{font-size:11px}
+.openbadge.wait{background:var(--attn-soft);color:var(--ink)}
+.desk.closed{opacity:.5;filter:grayscale(.7)}
+.bubble.closed{font-style:italic}
+.modal{position:fixed;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);width:min(520px,calc(100% - 32px));max-height:calc(100vh - 64px);overflow:auto;background:var(--panel);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.3);padding:20px;display:flex;flex-direction:column;gap:12px}
+.modal h2{font-size:20px}
+.modal .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.plainlist{margin:0;padding-left:18px;font-size:14px}
+.radio{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;cursor:pointer}
+.hint{font-size:12.5px;color:var(--muted);margin:0}

@@ -4,7 +4,7 @@ import OfficeView from "./office-view";
 
 export const dynamic = "force-dynamic";
 
-export type Building = { id: string; slug: string; name: string; attention: number; open: boolean };
+export type Building = { id: string; slug: string; name: string; attention: number; open: boolean; switchOpen: boolean };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ ws?: string }> }) {
   const { ws } = await searchParams;
@@ -14,7 +14,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ w
     const offices: Office[] = await Promise.all(all.map(w => loadWorkspace(w.id).then(buildOffice)));
     const current = offices.find(o => o.workspaceSlug === ws || o.workspaceId === ws) ?? offices[0];
     const count = (o: Office) => o.attention.overdue.length + o.attention.human.length + o.attention.review.length + o.attention.failed.length;
-    const buildings: Building[] = offices.map(o => ({ id: o.workspaceId, slug: o.workspaceSlug, name: o.workspace, attention: count(o), open: o.open }));
+    const buildings: Building[] = offices.map(o => ({ id: o.workspaceId, slug: o.workspaceSlug, name: o.workspace, attention: count(o), open: o.open, switchOpen: o.switchOpen }));
     const merged: Office["attention"] = {
       overdue: offices.flatMap(o => o.attention.overdue),
       human: offices.flatMap(o => o.attention.human),

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { Office, Desk, TaskView, RunView } from "@/lib/office";
 import TaskPanel from "./task-panel";
 import type { Building } from "./page";
+import OfficeSwitch from "./office-switch";
 
 const REFRESH_MS = 30_000;
 
@@ -121,6 +122,8 @@ export default function OfficeView({ office, buildings, attention, people }: { o
   const many = buildings.length > 1;
   const [adding, setAdding] = useState(false);
   const [person, setPerson] = useState<string>("Semua");
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 6000); return () => clearTimeout(t); }, [toast]);
 
   useEffect(() => {
     const t = setInterval(() => router.refresh(), REFRESH_MS);
@@ -147,12 +150,13 @@ export default function OfficeView({ office, buildings, attention, people }: { o
             {many ? (
               <nav className="buildings" aria-label="Pilih gedung">{buildings.map(b => (
                 <a key={b.id} href={`/?ws=${b.slug}`} className="bld" aria-current={b.id === office.workspaceId ? "page" : undefined}>
-                  🏢 {b.name}{b.attention ? <span className="count">{b.attention}</span> : null}
+                  {b.switchOpen ? "🏢" : "🔒"} {b.name}{b.attention ? <span className="count">{b.attention}</span> : null}
                 </a>))}</nav>
             ) : <span className="tag">{office.workspace}</span>}
           </div>
           <div className="chiprow">
-            <span className={`openbadge ${office.open ? "on" : "off"}`}>{office.open ? "🟢 Kantor buka" : "🌙 Kantor tutup"}</span>
+            <OfficeSwitch key={office.workspaceId + String(office.switchOpen)} ws={office.workspaceId} name={office.workspace} switchOpen={office.switchOpen} laptopOn={office.open} parked={office.parked}
+              onDone={msg => { setToast(msg); router.refresh(); }} />
             {office.runtimes.map(r => (
               <span key={r.name} className={`rt ${r.online ? "on" : ""}`} title={`Terakhir terlihat ${r.lastSeen}`}><i />{r.name}</span>
             ))}
@@ -168,7 +172,7 @@ export default function OfficeView({ office, buildings, attention, people }: { o
             <span><i className="dot" style={{ background: "var(--attn)" }} />Menunggu review</span>
             <span><i className="dot" style={{ background: "var(--todo)" }} />Siap mengerjakan</span>
             <span><i className="dot" style={{ background: "#C2412D" }} />Gagal</span>
-            <span>🏠 Pulang</span><span>🌙 Kantor tutup</span><span>🔴 Telat · 🟠 Berisiko</span>
+            <span>🏠 Pulang</span><span>🔒 Kantor tutup</span><span>🌙 Laptop mati</span><span>🔴 Telat · 🟠 Berisiko</span>
           </div>
 
           {office.rooms.map(r => (
@@ -248,6 +252,7 @@ export default function OfficeView({ office, buildings, attention, people }: { o
         </div>
       )}
 
+      {toast && <div className="toast" role="status">{toast}</div>}
       {openTask && <TaskPanel id={openTask.id} ws={openTask.ws} onClose={() => setOpenTask(null)} onChanged={() => router.refresh()} />}
     </>
   );

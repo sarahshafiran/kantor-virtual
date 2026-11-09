@@ -7,7 +7,7 @@ export type TaskView = {
   id: string; key: string; title: string; status: string; statusLabel: string; due: string | null; dueFlag: Due;
   dueText: string | null; url: string; ws: string; wsName: string; assignee: string | null; assigneeType: "agent" | "member" | null; project: string | null;
 };
-export type DeskState = "working" | "failed" | "review" | "ready" | "home" | "off";
+export type DeskState = "working" | "failed" | "review" | "ready" | "home" | "off" | "closed";
 export type Desk = {
   agentId: string; name: string; emoji: string | null; avatar: string | null; description: string;
   runtime: string; state: DeskState; bubble: string; reviewCount: number; lateCount: number; riskCount: number; tasks: TaskView[];
@@ -16,6 +16,7 @@ export type Room = { id: string; name: string; icon: string | null; progress: st
 export type RunView = { id: string; issueId: string | null; ws: string; agent: string; status: string; when: string; error: string | null; issueTitle: string | null; url: string | null };
 export type Office = {
   workspace: string; workspaceId: string; workspaceSlug: string; today: string; updatedAt: string; open: boolean;
+  switchOpen: boolean; parked: number; changedBy: string | null;
   runtimes: { name: string; provider: string; online: boolean; lastSeen: string }[];
   rooms: Room[]; idleDesks: Desk[];
   attention: { overdue: TaskView[]; human: TaskView[]; review: TaskView[]; failed: RunView[] };
@@ -68,6 +69,7 @@ export function buildOffice(s: Snapshot): Office {
   const url = (i: Issue) => `${process.env.MULTICA_APP_URL || "https://multica.ai"}/${s.workspace.slug}/issues/${i.identifier}`;
 
   const open = s.issues.filter(i => !isClosed(i));
+  const switchOpen = s.kantor.open !== false;
 
   const view = (i: Issue): TaskView => {
     let dueFlag: Due = null, dueText: string | null = null;
@@ -84,7 +86,8 @@ export function buildOffice(s: Snapshot): Office {
     const assignee = i.assignee_type === "agent" ? agentById.get(i.assignee_id || "")?.name ?? "Agen"
       : i.assignee_type === "member" ? memberName(i.assignee_id) : null;
     return {
-      id: i.id, key: i.identifier, title: friendlyTitle(i), status: i.status, statusLabel: i.status_name || STATUS_LABEL[i.status] || i.status,
+      id: i.id, key: i.identifier, title: friendlyTitle(i), status: i.status,
+      statusLabel: i.status === "backlog" && (i.metadata ?? {}).kantor_parked ? "Menunggu kantor buka" : i.status_name || STATUS_LABEL[i.status] || i.status,
       due: i.due_date, dueFlag, dueText, url: url(i), ws: s.workspace.id, wsName: s.workspace.name, assignee, assigneeType: i.assignee_type,
       project: i.project_id ? projectById.get(i.project_id)?.title ?? null : null,
     };
@@ -112,7 +115,9 @@ export function buildOffice(s: Snapshot): Office {
     const review = mine.filter(i => i.status === "in_review");
     const ready = mine.filter(i => i.status === "todo" || i.status === "in_progress");
     let state: DeskState, bubble: string;
-    if (!online) { state = "off"; bubble = "🌙 Kantor tutup · laptop mati"; }
+    const parkedMine = mine.filter(i => (i.metadata ?? {}).kantor_parked).length;
+    if (!switchOpen && !active) { state = "closed"; bubble = parkedMine ? `🔒 Kantor tutup · ${parkedMine} task menunggu` : "🔒 Kantor tutup"; }
+    else if (!online) { state = "off"; bubble = "🌙 Laptop mati · lanjut saat menyala"; }
     else if (active) { state = "working"; const ai = issueById.get(active.issue_id || ""); bubble = "Mengerjakan: " + (ai ? friendlyTitle(ai) : "tugas"); }
     else if (last?.status === "failed" && Date.now() - Date.parse(last.created_at) < 86400000 * 3) { state = "failed"; bubble = "⚠️ Gagal: " + shortError(last.error); }
     else if (review.length) { state = "review"; bubble = `Menunggu review-mu (${review.length})`; }
@@ -171,6 +176,8 @@ export function buildOffice(s: Snapshot): Office {
     today: new Intl.DateTimeFormat("id-ID", { timeZone: tz, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()),
     updatedAt: new Intl.DateTimeFormat("id-ID", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date()),
     open: s.runtimes.some(r => r.status === "online"),
+    switchOpen, parked: s.issues.filter(i => (i.metadata ?? {}).kantor_parked && i.status === "backlog").length,
+    changedBy: s.kantor.changedBy ?? null,
     runtimes: s.runtimes.map(r => ({ name: r.provider === "claude" ? "Claude" : r.provider === "codex" ? "GPT (Codex)" : r.name, provider: r.provider, online: r.status === "online", lastSeen: relTime(r.last_seen_at, tz) })),
     rooms, idleDesks,
     attention: {
