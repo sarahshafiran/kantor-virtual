@@ -123,6 +123,16 @@ export default function OfficeView({ office, buildings, attention, people }: { o
   const [adding, setAdding] = useState(false);
   const [person, setPerson] = useState<string>("Semua");
   const [toast, setToast] = useState<string | null>(null);
+  const [rerunning, setRerunning] = useState<string | null>(null);
+  async function rerun(f: RunView) {
+    setRerunning(f.id);
+    try {
+      const r = await fetch(`/api/task/${f.issueId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ws: f.ws, action: "rerun" }) });
+      const j = await r.json(); if (j.error) throw new Error(j.error);
+      setToast(`${f.agent} mencoba lagi: ${f.issueTitle ?? "task"}`); router.refresh();
+    } catch (e) { setToast("Gagal menjalankan ulang: " + (e instanceof Error ? e.message : String(e))); }
+    finally { setRerunning(null); }
+  }
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 6000); return () => clearTimeout(t); }, [toast]);
 
   useEffect(() => {
@@ -175,6 +185,8 @@ export default function OfficeView({ office, buildings, attention, people }: { o
             <span>🏠 Pulang</span><span>🔒 Kantor tutup</span><span>🌙 Laptop mati</span><span>🔴 Telat · 🟠 Berisiko</span>
           </div>
 
+          {office.alerts.map(a => <div key={a} className="alert" role="alert">⚠️ {a}</div>)}
+
           {office.rooms.map(r => (
             <section key={r.id} className="room" aria-label={r.name}>
               <div className="roomhead">
@@ -210,9 +222,10 @@ export default function OfficeView({ office, buildings, attention, people }: { o
             </Section>
             <Section title="❗ Gagal (7 hari terakhir)" count={a.failed.length} empty="Tidak ada yang gagal.">
               {a.failed.map(f => (
-                <li key={f.id}><button className="item" onClick={() => f.issueId && setOpenTask(f.issueId, f.ws)}>
+                <li key={f.id} className="failrow"><button className="item" onClick={() => f.issueId && setOpenTask(f.issueId, f.ws)}>
                   <span><b>{f.issueTitle ?? "Tugas tanpa judul"}</b><small><span className="kind k-fail">Gagal</span>{f.agent} · {f.error} · {f.when}</small></span>
-                </button></li>
+                </button>
+                {f.issueId && <button className="btn sm" disabled={rerunning === f.id} onClick={() => rerun(f)}>{rerunning === f.id ? "…" : "↻ Jalankan ulang"}</button>}</li>
               ))}
             </Section>
           </div>

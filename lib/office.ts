@@ -17,6 +17,7 @@ export type RunView = { id: string; issueId: string | null; ws: string; agent: s
 export type Office = {
   workspace: string; workspaceId: string; workspaceSlug: string; today: string; updatedAt: string; open: boolean;
   switchOpen: boolean; parked: number; changedBy: string | null;
+  alerts: string[];
   runtimes: { name: string; provider: string; online: boolean; lastSeen: string }[];
   rooms: Room[]; idleDesks: Desk[];
   attention: { overdue: TaskView[]; human: TaskView[]; review: TaskView[]; failed: RunView[] };
@@ -52,10 +53,24 @@ const imgOf = (a: Agent) => (a.avatar_url && /^https?:/.test(a.avatar_url) ? a.a
 
 function shortError(e: string | null) {
   if (!e) return "alasan tidak diketahui";
-  if (/oauth|authenticat|login/i.test(e)) return "login AI kedaluwarsa";
+  if (/oauth|authenticat|login/i.test(e)) return "login Claude/GPT di laptop kedaluwarsa";
   if (/rate|limit|quota|usage/i.test(e)) return "kuota AI habis";
   if (/offline|heartbeat/i.test(e)) return "laptop mati saat bekerja";
   return e.length > 60 ? e.slice(0, 57) + "…" : e;
+}
+
+/** Peringatan kalau login Claude/GPT di laptop kedaluwarsa (run terakhir di runtime itu gagal karena login). */
+function loginAlerts(s: Snapshot): string[] {
+  const out: string[] = [];
+  for (const rt of s.runtimes) {
+    const last = s.runs.filter(r => r.runtime_id === rt.id).sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))[0];
+    if (last?.status === "failed" && /oauth|authenticat|login/i.test(last.error ?? "")) {
+      const who = rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "ChatGPT (Codex)" : rt.provider;
+      const cmd = rt.provider === "claude" ? "claude auth login" : rt.provider === "codex" ? "codex login" : "";
+      out.push(`Login ${who} di laptop ini kedaluwarsa, jadi worker ${who} tidak bisa bekerja.${cmd ? ` Perbaiki: buka aplikasi Terminal, ketik  ${cmd}  lalu ikuti petunjuknya.` : ""} Setelah itu klik "Jalankan ulang" di daftar Gagal.`);
+    }
+  }
+  return out;
 }
 
 export function buildOffice(s: Snapshot): Office {
@@ -178,6 +193,7 @@ export function buildOffice(s: Snapshot): Office {
     open: s.runtimes.some(r => r.status === "online"),
     switchOpen, parked: s.issues.filter(i => (i.metadata ?? {}).kantor_parked && i.status === "backlog").length,
     changedBy: s.kantor.changedBy ?? null,
+    alerts: loginAlerts(s),
     runtimes: s.runtimes.map(r => ({ name: r.provider === "claude" ? "Claude" : r.provider === "codex" ? "GPT (Codex)" : r.name, provider: r.provider, online: r.status === "online", lastSeen: relTime(r.last_seen_at, tz) })),
     rooms, idleDesks,
     attention: {

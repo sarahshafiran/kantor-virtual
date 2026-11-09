@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildDetail } from "@/lib/detail";
-import { addComment, updateIssue, setIssueMeta, issueDetail, me, kantorSettings } from "@/lib/multica";
+import { addComment, updateIssue, setIssueMeta, issueDetail, me, kantorSettings, rerunIssue } from "@/lib/multica";
 import { parkIssue } from "@/lib/office-control";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   catch (e) { return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 500 }); }
 }
 
-type Body = { ws?: string; action: "approve" | "revise" | "reply" | "done" | "rename"; text?: string; link?: string };
+type Body = { ws?: string; action: "approve" | "revise" | "reply" | "done" | "rename" | "rerun"; text?: string; link?: string };
 
 /** Aksi dari kantor. Setiap aksi ditulis ke Multica atas nama pemilik token. */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -51,6 +51,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       case "done":
         await addComment(ws, id, `✅ Sudah dikerjakan oleh ${who}.${body.link ? `\n\nLink: ${body.link}` : ""}${text ? `\n\n${text}` : ""}`, quiet);
         await updateIssue(ws, id, { status: "done" });
+        break;
+      case "rerun":
+        // Ulangi kerja worker untuk task ini (misalnya setelah login AI diperbaiki).
+        await rerunIssue(ws, id);
         break;
       case "rename":
         await setIssueMeta(ws, id, "kantor_title", text);

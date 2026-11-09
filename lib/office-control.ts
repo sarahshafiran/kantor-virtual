@@ -11,7 +11,7 @@ import { friendlyTitle } from "./titles";
 
 export const PARK_KEY = "kantor_parked";
 const ACTIVE = new Set(["queued", "dispatched", "running", "in_progress", "preparing", "started"]);
-const RESUMABLE_FAIL = /offline|heartbeat|rate|limit|quota|usage|cancel/i;
+const RESUMABLE_FAIL = /offline|heartbeat|rate|limit|quota|usage|cancel|authenticat|oauth|login/i;
 
 export type Plan = {
   action: "close" | "open";

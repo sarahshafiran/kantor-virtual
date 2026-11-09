@@ -262,3 +262,7 @@ a.btn{text-decoration:none;display:inline-block}
 .plainlist{margin:0;padding-left:18px;font-size:14px}
 .radio{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:6px;cursor:pointer}
 .hint{font-size:12.5px;color:var(--muted);margin:0}
+.failrow{display:flex;align-items:center;gap:6px}
+.failrow .item{flex:1;min-width:0}
+.failrow .btn{flex:none;margin-right:6px}
+.alert{border:1px solid #C2412D;background:#F9DEDA;color:#5E1A0F;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600}
