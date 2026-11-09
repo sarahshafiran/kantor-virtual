@@ -6,6 +6,7 @@ import TaskPanel from "./task-panel";
 import type { Building } from "./page";
 import OfficeSwitch from "./office-switch";
 import FilePicker, { uploadAll } from "./file-picker";
+import ChatPanel from "./chat-panel";
 
 const REFRESH_MS = 30_000;
 
@@ -21,8 +22,12 @@ function Avatar({ d, home }: { d: Desk; home?: boolean }) {
 function Presence({ name, at }: { name: string; at?: string }) {
   const mins = at ? (Date.now() - Date.parse(at)) / 60000 : Infinity;
   const on = mins < 5;
-  const label = on ? "online" : !at ? "belum pernah buka" : mins < 60 ? `${Math.round(mins)} mnt lalu` : mins < 1440 ? `${Math.round(mins / 60)} jam lalu` : `${Math.round(mins / 1440)} hari lalu`;
-  return <span className={`who-chip ${on ? "on" : ""}`} title={`${name}: ${label}`}><i />{name} <small>{label}</small></span>;
+  const label = on ? "di kantor" : !at ? "belum pernah buka" : mins < 60 ? `${Math.round(mins)} mnt lalu` : mins < 1440 ? `${Math.round(mins / 60)} jam lalu` : `${Math.round(mins / 1440)} hari lalu`;
+  return (
+    <span className={`person ${on ? "on" : ""}`} title={`${name}: ${on ? "sedang membuka kantor" : "terakhir membuka kantor " + label}`}>
+      <span className="initial">{name.slice(0, 1).toUpperCase()}</span>{name} <small>{label}</small>
+    </span>
+  );
 }
 
 function DueChip({ t }: { t: TaskView }) {
@@ -88,8 +93,8 @@ function Section({ title, count, children, empty }: { title: string; count: numb
   );
 }
 
-function NewTaskForm({ ws, desk, projects, onDone }: { ws: string; desk: Desk; projects: Office["projects"]; onDone: (id: string | null) => void }) {
-  const [title, setTitle] = useState(""); const [detail, setDetail] = useState("");
+function NewTaskForm({ ws, desk, projects, onDone, initialDetail = "" }: { initialDetail?: string; ws: string; desk: Desk; projects: Office["projects"]; onDone: (id: string | null) => void }) {
+  const [title, setTitle] = useState(""); const [detail, setDetail] = useState(initialDetail);
   const [due, setDue] = useState(""); const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   const [files, setFiles] = useState<File[]>([]);
@@ -135,6 +140,8 @@ export default function OfficeView({ office, buildings, attention, people, seen 
   const setOpenTask = (id: string | null, ws: string = office.workspaceId) => setOpenTaskRaw(id ? { id, ws } : null);
   const many = buildings.length > 1;
   const [adding, setAdding] = useState(false);
+  const [chatWith, setChatWith] = useState<Desk | null>(null);
+  const [draft, setDraft] = useState("");
   const [person, setPerson] = useState<string>("Semua");
   const [toast, setToast] = useState<string | null>(null);
   const [rerunning, setRerunning] = useState<string | null>(null);
@@ -171,7 +178,9 @@ export default function OfficeView({ office, buildings, attention, people, seen 
   const total = a.overdue.length + a.human.length + a.review.length + a.failed.length;
   const runs: RunView[] = openDesk ? office.agentsDetail[openDesk.agentId]?.runs ?? [] : [];
   const allTasks: TaskView[] = openDesk ? office.agentsDetail[openDesk.agentId]?.tasks ?? [] : [];
-  const closeAll = () => { setOpenTask(null); setOpenDesk(null); setAdding(false); };
+  const closeAll = () => { setOpenTask(null); setOpenDesk(null); setAdding(false); setChatWith(null); };
+  const allDesks = [...office.rooms.flatMap(r => r.desks), ...office.idleDesks];
+  const mika = allDesks.find(d => d.name.toLowerCase() === "mika");
 
   return (
     <>
@@ -186,12 +195,19 @@ export default function OfficeView({ office, buildings, attention, people, seen 
             ) : <span className="tag">{office.workspace}</span>}
           </div>
           <div className="chiprow">
+            {mika && <button className="btn sm" onClick={() => setChatWith(mika)}>💬 Ngobrol dengan Mika</button>}
             <OfficeSwitch key={office.workspaceId + String(office.switchOpen)} ws={office.workspaceId} name={office.workspace} switchOpen={office.switchOpen} laptopOn={office.open} parked={office.parked}
               onDone={msg => { setToast(msg); refresh(); }} />
-            {office.runtimes.map(r => (
-              <span key={r.name} className={`rt ${r.online ? "on" : ""}`} title={`Terakhir terlihat ${r.lastSeen}`}><i />{r.name}</span>
-            ))}
-            <span className="people" aria-label="Siapa yang online">{people.map(p => <Presence key={p} name={p} at={seen[p]} />)}</span>
+            <span className="hgroup" aria-label="Mesin AI">
+              <span className="hlabel">Mesin AI</span>
+              {office.runtimes.map(r => (
+                <span key={r.name} className={`rt ${r.online ? "on" : ""}`} title={r.online ? `${r.name} siap bekerja` : `Laptop mati · terakhir terlihat ${r.lastSeen}`}>🤖 {r.name} <small>{r.online ? "siap" : "mati"}</small></span>
+              ))}
+            </span>
+            <span className="hgroup" aria-label="Tim">
+              <span className="hlabel">Tim</span>
+              {people.map(p => <Presence key={p} name={p} at={seen[p]} />)}
+            </span>
             <span className="clock">{refreshing ? <><span className="spinner sm" /> Memperbarui…</> : `Diperbarui ${office.updatedAt}`}</span>
           </div>
         </div>
@@ -254,9 +270,9 @@ export default function OfficeView({ office, buildings, attention, people, seen 
         </aside>
       </main>
 
-      {(openDesk || openTask) && <div className="scrim" onClick={closeAll} />}
+      {(openDesk || openTask || chatWith) && <div className="scrim" onClick={closeAll} />}
 
-      {openDesk && !openTask && (
+      {openDesk && !openTask && !chatWith && (
         <div className="drawer" role="dialog" aria-modal="true" aria-label={openDesk.name}>
           <div className="dhead">
             <span className={`st-${openDesk.state}`}><Avatar d={openDesk} /></span>
@@ -266,9 +282,12 @@ export default function OfficeView({ office, buildings, attention, people, seen 
           <div className="dbody">
             <div className="note"><span>{openDesk.bubble}</span></div>
             {adding ? (
-              <NewTaskForm ws={office.workspaceId} desk={openDesk} projects={office.projects} onDone={id => { setAdding(false); refresh(); if (id) setOpenTask(id); }} />
+              <NewTaskForm ws={office.workspaceId} desk={openDesk} projects={office.projects} initialDetail={draft} onDone={id => { setAdding(false); setDraft(""); refresh(); if (id) setOpenTask(id); }} />
             ) : (
-              <button className="btn primary" onClick={() => setAdding(true)}>+ Beri task baru</button>
+              <div className="chiprow">
+                <button className="btn primary" onClick={() => setChatWith(openDesk)}>💬 Ngobrol</button>
+                <button className="btn" onClick={() => { setDraft(""); setAdding(true); }}>+ Beri task baru</button>
+              </div>
             )}
             <div>
               <div className="sect">Task terbuka ({allTasks.length})</div>
@@ -287,6 +306,12 @@ export default function OfficeView({ office, buildings, attention, people, seen 
         </div>
       )}
 
+      {chatWith && (
+        <ChatPanel ws={office.workspaceId} agent={{ id: chatWith.agentId, name: chatWith.name, emoji: chatWith.emoji, role: chatWith.description }}
+          isMika={chatWith.name.toLowerCase() === "mika"} projectId={null} laptopOn={office.open}
+          onClose={() => setChatWith(null)}
+          onMakeTask={detail => { const d = chatWith; setChatWith(null); setOpenDesk(d); setDraft(detail); setAdding(true); }} />
+      )}
       {toast && <div className="toast" role="status">{toast}</div>}
       {openTask && <TaskPanel id={openTask.id} ws={openTask.ws} onClose={() => setOpenTask(null)} onChanged={refresh} />}
     </>

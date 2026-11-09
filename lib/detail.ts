@@ -5,7 +5,7 @@ import { friendlyTitle } from "./titles";
 
 export type Message = {
   id: string; who: string; whoKind: "agent" | "member" | "system"; emoji: string | null; when: string; text: string;
-  images: { name: string; url: string }[]; files: { name: string; url: string }[];
+  images: { id: string; name: string; url: string }[]; files: { id: string; name: string; url: string }[];
 };
 export type TaskDetail = {
   id: string; title: string; originalTitle: string; key: string; project: string | null; url: string;
@@ -32,9 +32,10 @@ export async function buildDetail(id: string, wsPick?: string | null): Promise<T
   const emojiOf = (kind: string, aid: string) => (kind === "agent" ? emoji(snap.agents.find(a => a.id === aid)?.avatar_url) : null);
   const when = (iso: string) => new Intl.DateTimeFormat("id-ID", { timeZone: tz, weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
-  const files = (list: { filename: string; url: string; download_url?: string; content_type?: string }[]) => ({
-    images: list.filter(isImage).map(f => ({ name: f.filename, url: f.download_url || f.url })),
-    files: list.filter(f => !isImage(f)).map(f => ({ name: f.filename, url: f.download_url || f.url })),
+  const proxied = (f: { id: string; filename: string }) => ({ id: f.id, name: f.filename, url: `/api/file/${f.id}?ws=${snap.workspace.id}` });
+  const files = (list: { id: string; filename: string; url: string; download_url?: string; content_type?: string }[]) => ({
+    images: list.filter(isImage).map(proxied),
+    files: list.filter(f => !isImage(f)).map(proxied),
   });
 
   const messages: Message[] = comments

@@ -225,3 +225,44 @@ export async function deleteIssueMeta(wsPick: string | null | undefined, issueId
   const ws = await workspace(wsPick);
   return call("DELETE", `/api/issues/${issueId}/metadata/${encodeURIComponent(key)}`, ws.id);
 }
+
+// ---- Ngobrol dengan worker (chat Multica) ----
+export type ChatSession = { id: string; agent_id: string; project_id: string | null; title: string; status: string; updated_at: string; created_at: string; last_message?: { content?: string } | null; unread_count?: number };
+export type ChatMessage = { id: string; role: string; content: string; created_at: string; failure_reason: string | null; message_kind?: string; attachments?: Attachment[]; task_id?: string | null };
+
+export async function chatSessions(wsPick: string | null | undefined) {
+  const ws = await workspace(wsPick);
+  return get<unknown>("/api/chat/sessions", ws.id).then(d => list<ChatSession>(d, "sessions"));
+}
+export async function createChat(wsPick: string | null | undefined, agentId: string, title: string, projectId?: string | null) {
+  const ws = await workspace(wsPick);
+  return call<ChatSession>("POST", "/api/chat/sessions", ws.id, { agent_id: agentId, title, project_id: projectId ?? null });
+}
+export async function chatMessages(wsPick: string | null | undefined, sessionId: string) {
+  const ws = await workspace(wsPick);
+  return get<unknown>(`/api/chat/sessions/${sessionId}/messages`, ws.id).then(d => list<ChatMessage>(d, "messages"));
+}
+export async function chatPending(wsPick: string | null | undefined, sessionId: string) {
+  const ws = await workspace(wsPick);
+  return get<{ task_id?: string; status?: string }>(`/api/chat/sessions/${sessionId}/pending-task`, ws.id).catch(() => ({} as { task_id?: string; status?: string }));
+}
+export async function sendChat(wsPick: string | null | undefined, sessionId: string, content: string, attachmentIds: string[] = []) {
+  const ws = await workspace(wsPick);
+  return call("POST", `/api/chat/sessions/${sessionId}/messages`, ws.id, { content, attachment_ids: attachmentIds });
+}
+export async function markChatRead(wsPick: string | null | undefined, sessionId: string) {
+  const ws = await workspace(wsPick);
+  return call("POST", `/api/chat/sessions/${sessionId}/read`, ws.id, {}).catch(() => null);
+}
+
+// ---- File: isi teks (untuk pratinjau) dan file asli ----
+export async function fileText(wsPick: string | null | undefined, id: string) {
+  const ws = await workspace(wsPick);
+  const res = await fetch(`${API}/api/attachments/${id}/content`, { headers: { Authorization: `Bearer ${token()}`, "X-Workspace-ID": ws.id }, cache: "no-store" });
+  if (!res.ok) throw new Error(`Tidak bisa membaca file (${res.status})`);
+  return res.text();
+}
+export async function fileRaw(wsPick: string | null | undefined, id: string) {
+  const ws = await workspace(wsPick);
+  return fetch(`${API}/api/attachments/${id}/download`, { headers: { Authorization: `Bearer ${token()}`, "X-Workspace-ID": ws.id }, cache: "no-store", redirect: "follow" });
+}

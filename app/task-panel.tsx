@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { TaskDetail } from "@/lib/detail";
 import FilePicker, { uploadAll } from "./file-picker";
+import FilePreview from "./file-preview";
 
 const md = (text: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: (p) => <a {...p} target="_blank" rel="noreferrer" /> }}>{text}</ReactMarkdown>;
 const POLL_MS = 4000;
@@ -124,7 +125,7 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
               <div className="from"><span>{m.emoji ? `${m.emoji} ` : ""}{m.who}</span><span>{m.when}</span></div>
               {m.text && <div className="md">{md(m.text)}</div>}
               {m.images.length > 0 && <div className="gallery">{m.images.map(i => <a key={i.url} href={i.url} target="_blank" rel="noreferrer"><img src={i.url} alt={i.name} /></a>)}</div>}
-              {m.files.length > 0 && <div className="chips">{m.files.map(f => <a key={f.url} className="chip" href={f.url} target="_blank" rel="noreferrer">📎 {f.name}</a>)}</div>}
+              {m.files.map(f => <FilePreview key={f.id} f={f} />)}
             </div>
           ))}
           {pending && (
