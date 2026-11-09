@@ -1,0 +1,512 @@
+<title>Kantor Virtual</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: denah kantor dari atas (ruangan per project) di kiri, panel "Perlu Perhatianku" tetap di kanan, laci detail worker meluncur dari kanan. */
+:root{
+  --floor:#EDEFEA; --floor-line:#E2E5DE; --room:#F8F8F4; --wall:#2E3B38; --desk:#D9CBB3; --desk-edge:#BFAE92;
+  --ink:#1F2A27; --muted:#66716D; --line:#D5D9D2; --panel:#FFFFFF; --sunk:#F2F3EF;
+  --accent:#2F6B5A; --accent-ink:#FFFFFF; --accent-soft:#DCEBE5;
+  --attn:#C98A00; --attn-soft:#FBEFCF; --ok:#2E8B57; --ok-soft:#DDF0E4; --wait:#B4561F; --wait-soft:#F8E3D6; --off:#7C8590;
+  --todo:#3F63B5; --todo-soft:#E0E8F8; --brk:#8A5A3C; --brk-soft:#F1E6DC;
+  --shadow:0 1px 2px rgba(30,40,35,.08),0 6px 18px rgba(30,40,35,.08);
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Figtree",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --floor:#171C1B; --floor-line:#1E2423; --room:#1F2625; --wall:#8FA59E; --desk:#4A4236; --desk-edge:#5E5444;
+  --ink:#E7ECE9; --muted:#9AA6A1; --line:#323B39; --panel:#1C2221; --sunk:#252D2B;
+  --accent:#6FC2A6; --accent-ink:#0F1A17; --accent-soft:#21362F;
+  --attn:#F0B531; --attn-soft:#3A3018; --ok:#5CC48A; --ok-soft:#1D3527; --wait:#EE8A52; --wait-soft:#3B261A; --off:#7E8893;
+  --todo:#8AA8F0; --todo-soft:#1E2840; --brk:#D2A07E; --brk-soft:#35281F;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.3); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --floor:#171C1B; --floor-line:#1E2423; --room:#1F2625; --wall:#8FA59E; --desk:#4A4236; --desk-edge:#5E5444;
+  --ink:#E7ECE9; --muted:#9AA6A1; --line:#323B39; --panel:#1C2221; --sunk:#252D2B;
+  --accent:#6FC2A6; --accent-ink:#0F1A17; --accent-soft:#21362F;
+  --attn:#F0B531; --attn-soft:#3A3018; --ok:#5CC48A; --ok-soft:#1D3527; --wait:#EE8A52; --wait-soft:#3B261A; --off:#7E8893;
+  --todo:#8AA8F0; --todo-soft:#1E2840; --brk:#D2A07E; --brk-soft:#35281F;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.3); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--floor);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--panel);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+.hbar{display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding-block:12px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{font-size:22px}
+.tag{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--sunk);padding:2px 8px;border-radius:4px}
+.clock{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.switch{display:flex;align-items:center;gap:8px;font-size:13px;border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:4px 12px 4px 4px}
+.switch .knob{width:34px;height:20px;border-radius:999px;background:var(--line);position:relative;transition:background .2s;flex:none}
+.switch .knob::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--panel);box-shadow:var(--shadow);transition:left .2s}
+.switch[aria-pressed="true"] .knob{background:var(--accent)}
+.switch[aria-pressed="true"] .knob::after{left:16px}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;padding-block:24px;align-items:start}
+.office{display:flex;flex-direction:column;gap:28px;min-width:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+.room{position:relative;border:6px solid var(--wall);border-radius:6px;padding:20px 20px 26px;
+  background-image:linear-gradient(var(--floor-line) 1px,transparent 1px),linear-gradient(90deg,var(--floor-line) 1px,transparent 1px);background-size:32px 32px;background-color:var(--room)}
+.room::after{content:"";position:absolute;bottom:-6px;left:48px;width:64px;height:6px;background:var(--room)}
+.roomhead{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.roomhead h2{font-size:20px}
+.roomhead .sub{font-size:13px;color:var(--muted)}
+.roomhead .actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.warn{background:var(--attn-soft);border-color:var(--attn)}
+.btn.sm{padding:3px 9px;font-size:12px}
+.desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:22px 18px}
+
+.desk{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;background:none;border:0;padding:56px 6px 4px;border-radius:10px;transition:transform .15s}
+.desk:hover{transform:translateY(-2px)}
+.bubble{position:absolute;top:0;left:50%;transform:translateX(-50%);width:max-content;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:5px 10px;font-size:12.5px;line-height:1.3;box-shadow:var(--shadow);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;--b:var(--panel);--bl:var(--line)}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;background:var(--b);border-right:1px solid var(--bl);border-bottom:1px solid var(--bl);transform:translateX(-50%) rotate(45deg)}
+.bubble.waiting{--b:var(--wait-soft);--bl:var(--wait);background:var(--b);border-color:var(--bl)}
+.bubble.human{--b:var(--todo-soft);--bl:var(--todo);background:var(--b);border-color:var(--bl)}
+.bubble.break{--b:var(--brk-soft);--bl:var(--brk);background:var(--b);border-color:var(--bl)}
+.avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:30px;background:var(--accent-soft);border:3px solid var(--panel);box-shadow:var(--shadow);position:relative;z-index:1}
+.status-dot{position:absolute;right:-2px;bottom:-2px;width:16px;height:16px;border-radius:50%;border:3px solid var(--panel);background:var(--off)}
+.st-working .status-dot{background:var(--ok)}
+.st-waiting .status-dot{background:var(--wait)}
+.st-human .status-dot{background:var(--todo)}
+.st-break .status-dot{background:var(--brk)}
+.surface{margin-top:-10px;width:100%;max-width:170px;height:44px;background:var(--desk);border:2px solid var(--desk-edge);border-radius:6px;position:relative}
+.surface .pc{position:absolute;left:12px;top:6px;font-size:18px}
+.surface .cup{position:absolute;left:38px;top:8px;font-size:15px}
+.stack{position:absolute;right:-10px;top:-12px;background:var(--attn);color:#1F1A0C;font-weight:700;font-size:12px;border-radius:999px;padding:2px 8px;box-shadow:var(--shadow);font-family:var(--f-mono)}
+.who{margin-top:8px;font-weight:700}
+.role{font-size:12.5px;color:var(--muted)}
+.model{font-family:var(--f-mono);font-size:11px;color:var(--muted);margin-top:2px}
+.desk.off,.desk.home{opacity:.5;filter:grayscale(.6)}
+.desk.home .avatar{background:var(--sunk)}
+.desk.off .bubble,.desk.home .bubble{font-style:italic}
+@media (prefers-reduced-motion:no-preference){.st-working .status-dot{animation:pulse 1.8s infinite}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 50%,transparent)}50%{box-shadow:0 0 0 6px transparent}}
+.newroom{border:2px dashed var(--line);border-radius:6px;padding:22px;text-align:center;color:var(--muted);background:none;font-weight:600}
+
+.attn{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;max-height:calc(100vh - 110px);display:flex;flex-direction:column}
+.attn .ah{border-bottom:1px solid var(--line);padding:16px}
+.attn h2{font-size:18px;display:flex;align-items:center;gap:8px}
+.count{font-family:var(--f-mono);font-size:13px;background:var(--attn);color:#1F1A0C;border-radius:999px;padding:1px 9px}
+.attn p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+.attn .scroll{overflow:auto;padding:8px}
+.attn h3{font-family:var(--f-body);font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);padding:10px 10px 4px;display:flex;justify-content:space-between}
+.attn ul{list-style:none;margin:0;padding:0}
+.item{width:100%;text-align:left;display:flex;gap:10px;align-items:flex-start;padding:10px;border:0;background:none;border-radius:8px}
+.item:hover{background:var(--sunk)}
+.item .mini{font-size:22px;line-height:1}
+.item b{display:block;font-size:14px;line-height:1.3}
+.item small{color:var(--muted);font-size:12.5px}
+.kind{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:4px;margin-right:6px;color:var(--ink)}
+.k-review{background:var(--attn-soft)} .k-question{background:var(--wait-soft)} .k-human{background:var(--todo-soft)}
+.empty{padding:10px;color:var(--muted);font-size:13.5px}
+
+.scrim{position:fixed;inset:0;background:rgba(10,15,13,.35);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel);z-index:21;box-shadow:-10px 0 30px rgba(0,0,0,.2);display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.dhead{display:flex;gap:14px;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}
+.dhead .avatar{width:48px;height:48px;font-size:26px}
+.dhead .meta{flex:1;min-width:0}
+.dhead h2{font-size:20px}
+.x{border:0;background:var(--sunk);border-radius:8px;width:34px;height:34px;font-size:18px}
+.dbody{flex:1;overflow:auto;padding:18px 20px;display:flex;flex-direction:column;gap:18px;min-height:0}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px;margin:0}
+.facts dt{color:var(--muted)} .facts dd{margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;background:var(--sunk);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.sect{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.tasks{display:flex;flex-direction:column;gap:8px}
+.task{display:flex;align-items:center;gap:10px;text-align:left;width:100%;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:10px 12px}
+.task:hover{border-color:var(--accent)}
+.task .t{flex:1;min-width:0;font-weight:600;font-size:14px}
+.task .t small{display:block;font-weight:400;color:var(--muted);font-size:12.5px}
+.task.locked{background:var(--sunk);border-style:dashed}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap;color:var(--ink)}
+.p-review{background:var(--attn-soft);border:1px solid var(--attn)}
+.p-human{background:var(--todo-soft);border:1px solid var(--todo)}
+.p-doing{background:var(--ok-soft)}
+.p-paused{background:var(--brk-soft)}
+.p-queued,.p-locked{background:var(--sunk);color:var(--muted)}
+.p-done{background:var(--sunk);color:var(--muted);text-decoration:line-through}
+.back{border:0;background:none;color:var(--accent);font-weight:600;padding:0;font-size:14px;align-self:flex-start}
+
+.thread{display:flex;flex-direction:column;gap:12px}
+.msg{border-radius:12px;padding:12px 14px;font-size:14px;max-width:92%}
+.msg .from{font-size:12px;color:var(--muted);margin-bottom:4px;display:flex;gap:8px;flex-wrap:wrap}
+.msg.me{background:var(--accent-soft);align-self:flex-end}
+.msg.bot{background:var(--sunk);align-self:flex-start;border:1px solid var(--line)}
+.msg p{margin:0 0 6px} .msg p:last-child{margin:0}
+.ver{font-family:var(--f-mono);font-size:11px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.art{margin-top:6px;border-radius:8px;aspect-ratio:4/3;max-width:100%;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px;background:linear-gradient(160deg,#BFE3D0,#F6E2B3)}
+.art div{background:rgba(255,255,255,.55);border-radius:6px;display:grid;place-items:center;font-size:34px;color:#24302C;position:relative}
+.art div small{position:absolute;bottom:4px;font-size:10px;font-family:var(--f-mono)}
+
+.pkg{border:1px solid var(--todo);background:var(--todo-soft);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.pkg h4{margin:0;font-size:14px}
+.field{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.field .fl{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:2px}
+.field .fv{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.check label{display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer}
+.check input{margin-top:3px;accent-color:var(--accent)}
+
+.compose{border-top:1px solid var(--line);padding:14px 20px;display:flex;flex-direction:column;gap:10px;background:var(--panel)}
+.compose textarea,.compose input[type=url]{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--sunk);color:var(--ink);font:inherit;font-size:14px}
+.compose textarea{min-height:76px;resize:vertical}
+.compose .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.compose .hint{margin-right:auto;font-size:12.5px;color:var(--muted)}
+.typing{font-size:13px;color:var(--muted);font-style:italic}
+
+.board{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.page{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel);text-align:left;padding:0}
+.page .thumb{aspect-ratio:4/3;display:grid;place-items:center;font-size:30px;background:var(--sunk)}
+.page .thumb.has{background:linear-gradient(160deg,#BFE3D0,#F6E2B3)}
+.page .cap{padding:8px 10px;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.page .cap b{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);font-weight:500}
+.meter{height:8px;background:var(--sunk);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+.meter i{display:block;height:100%;background:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 16px;border-radius:10px;font-size:14px;z-index:40;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.note{font-size:13.5px;color:var(--ink);background:var(--sunk);border:1px dashed var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.note .row{display:flex;gap:8px;flex-wrap:wrap}
+
+@media (max-width:900px){main{grid-template-columns:minmax(0,1fr)}.attn{position:static;order:-1;max-height:none}}
+@media (max-width:480px){.desks{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 10px}.room{padding:16px 12px 22px}.bubble{font-size:11.5px}}
+</style>
+
+<header class="top">
+  <div class="wrap hbar">
+    <div class="brand"><h1>Kantor Virtual</h1><span class="tag">Mockup · data contoh</span></div>
+    <div class="clock" id="clock"></div>
+    <button class="switch" id="quotaBtn" aria-pressed="false"><span class="knob"></span>Simulasi: kuota Claude habis</button>
+    <button class="switch" id="nightBtn" aria-pressed="false"><span class="knob"></span>Lihat jam 20.00</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="office" aria-label="Denah kantor">
+    <div class="legend">
+      <span><i class="dot" style="background:var(--ok)"></i>Bekerja</span>
+      <span><i class="dot" style="background:var(--wait)"></i>Menunggu jawabanmu</span>
+      <span><i class="dot" style="background:var(--todo)"></i>Menunggu kamu mengerjakan</span>
+      <span><i class="dot" style="background:var(--brk)"></i>☕ Lagi break (kuota habis)</span>
+      <span>🏠 Pulang (antrean kosong)</span>
+      <span>🌙 Di luar jam kerja</span>
+    </div>
+    <div id="rooms" style="display:flex;flex-direction:column;gap:28px"></div>
+    <button class="newroom" data-toast="Di versi nyata: buat ruangan baru untuk project lain, lalu tambahkan worker.">+ Buat ruangan project baru</button>
+  </section>
+
+  <aside class="attn" aria-label="Perlu perhatianku">
+    <div class="ah"><h2>Perlu Perhatianku <span class="count" id="attnCount">0</span></h2><p>Semua yang menunggumu, dari semua ruangan.</p></div>
+    <div class="scroll" id="attnBody"></div>
+  </aside>
+</main>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="drawer" id="drawer" hidden role="dialog" aria-modal="true" aria-label="Detail"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const NOW = "10.24";
+const state = { night:false, quota:false, open:null };
+
+const rooms = [
+  { id:"a", name:"Project A", sub:"Laporan kuartal & koordinasi mitra", workers:[
+    { id:"rina", name:"Rina", emoji:"👩🏽‍💼", role:"Peneliti", model:"Claude", prov:"claude", tools:["🧠 Menulis","🔎 Cari di internet"], hours:"Sen–Jum · 08.00–17.00",
+      doing:"Merangkum 6 laporan pasar untuk bab 2",
+      tasks:[
+        { id:"t1", title:"Ringkasan tren pasar Q3", state:"review", kind:"review", thread:[
+          {me:true, t:"Senin 09.10", text:"Tolong rangkum tren pasar Q3 dari laporan yang kulampirkan. Maksimal 1 halaman, bahasa santai tapi rapi."},
+          {me:false, t:"Senin 10.02", v:1, text:"Tiga tren utama: (1) permintaan naik 12% dibanding Q2, didorong sektor ritel; (2) harga bahan baku mulai stabil sejak Agustus; (3) dua pesaing baru masuk dengan harga lebih rendah.|Rekomendasi singkat: fokus pada pelanggan ritel yang sudah ada sebelum perang harga dimulai."}
+        ]},
+        { id:"t2", title:"Bab 2: data pendukung", state:"doing", thread:[
+          {me:true, t:"Senin 10.05", text:"Lanjutkan ke bab 2, cari data pendukung dari sumber publik."},
+          {me:false, t:"Senin 10.06", text:"Siap, sedang mengumpulkan sumber. Kuberi kabar kalau draf siap."}
+        ]}
+      ]},
+    { id:"dimas", name:"Dimas", emoji:"🧑🏻‍💻", role:"Penulis", model:"GPT", prov:"openai", tools:["🧠 Menulis"], hours:"Sen–Jum · 08.00–17.00",
+      tasks:[
+        { id:"t3", title:"Draf pengantar laporan", state:"review", kind:"question", ask:"Menunggu: siapa target pembacanya?", thread:[
+          {me:true, t:"Jumat 15.20", text:"Buat pengantar laporan kuartal, sekitar 3 paragraf."},
+          {me:false, t:"Jumat 16.10", v:1, text:"Draf v1: Kuartal ini menjadi titik balik bagi tim kami…"},
+          {me:true, t:"Senin 08.30", text:"Terlalu formal. Buat lebih hangat, dan sebutkan pencapaian tim lapangan di paragraf pertama."},
+          {me:false, t:"Senin 09.15", v:2, text:"Draf v2: Tiga bulan terakhir, tim lapangan kita menembus target kunjungan untuk pertama kalinya tahun ini…|Satu pertanyaan sebelum v3: laporan ini dibaca direksi atau seluruh karyawan? Nadanya akan sedikit berbeda."}
+        ]}
+      ]},
+    { id:"sekar", name:"Sekar", emoji:"👩🏻‍🏫", role:"Sekretaris", model:"Claude", prov:"claude", tools:["🧠 Menulis"], hours:"Sen–Jum · 08.00–17.00",
+      tasks:[
+        { id:"t4", title:"Kirim email undangan rapat mitra", state:"human", kind:"human", thread:[
+          {me:true, t:"Senin 08.45", text:"Siapkan email undangan rapat koordinasi dengan tim mitra, Kamis jam 10 via Zoom. Nanti aku yang kirim."},
+          {me:false, t:"Senin 08.52", v:1, text:"Paket email sudah siap. Silakan kirim dari Gmail-mu, lalu klik Sudah supaya aku lanjut menyiapkan template notulen."}
+        ], pkg:{ fields:[["Ke","tim-mitra@contoh.id"],["Subjek","Undangan Rapat Koordinasi · Kamis, 13 Nov, 10.00 WIB"],["Isi","Halo rekan-rekan,\n\nKami mengundang Bapak/Ibu dalam rapat koordinasi kuartal pada Kamis, 13 November pukul 10.00 WIB melalui Zoom. Agenda: tinjauan capaian Q3 dan rencana Q4. Tautan rapat menyusul.\n\nSalam hangat"]],
+          steps:["Buka Gmail dan buat email baru","Salin penerima, subjek, dan isi dari kotak di atas","Kirim, lalu klik Sudah di bawah"] }},
+        { id:"t4b", title:"Template notulen rapat mitra", state:"locked", after:"t4", thread:[
+          {me:true, t:"Senin 08.45", text:"Setelah undangan terkirim, siapkan template notulen untuk rapat itu."}]}
+      ]}
+  ]},
+  { id:"b", name:"Buku Anak", sub:"“Momo si Kura-kura Pemberani” · 12 halaman", storyboard:true, workers:[
+    { id:"laras", name:"Laras", emoji:"👩🏼‍🎨", role:"Penulis Cerita", model:"Claude", prov:"claude", tools:["🧠 Menulis"], hours:"Setiap hari · 09.00–15.00", homeAt:"10.05",
+      tasks:[{ id:"t5", title:"Naskah halaman 1–12", state:"done", thread:[
+        {me:true,t:"Kamis 10.00",text:"Tulis naskah 12 halaman tentang kura-kura kecil yang takut menyeberang sungai."},
+        {me:false,t:"Kamis 11.30",v:3,text:"Naskah final v3 sudah kamu setujui."}]}]},
+    { id:"bima", name:"Bima", emoji:"🧑🏾‍🎨", role:"Ilustrator", model:"Claude + model gambar OpenAI", prov:"claude", tools:["🧠 Menulis","🎨 Ilustrasi"], hours:"Setiap hari · 09.00–15.00", quota:[18,30],
+      doing:"Menggambar halaman 7",
+      tasks:[
+        { id:"t6", title:"Lembar karakter Momo", state:"review", kind:"review", thread:[
+          {me:true, t:"Senin 09.05", text:"Buat lembar karakter Momo: kura-kura kecil, cangkang hijau toska, syal kuning. Gaya cat air lembut."},
+          {me:false, t:"Senin 09.40", v:2, text:"Lembar karakter v2: tampak depan, samping, dan belakang. Syal kubuat lebih panjang sesuai catatanmu.", art:true}
+        ]},
+        { id:"t7", title:"Ilustrasi halaman 7", state:"doing", thread:[
+          {me:true,t:"Senin 09.50",text:"Halaman 7: Momo berdiri di tepi sungai, ragu-ragu."},
+          {me:false,t:"Senin 09.51",text:"Sedang dikerjakan, memakai lembar karakter terakhir sebagai acuan."}]}
+      ]},
+    { id:"tari", name:"Tari", emoji:"👩🏻‍💻", role:"Marketer", model:"GPT", prov:"openai", tools:["🧠 Menulis"], hours:"Setiap hari · 09.00–15.00",
+      tasks:[
+        { id:"t9", title:"Posting teaser di Instagram", state:"human", kind:"human", thread:[
+          {me:true,t:"Senin 09.30",text:"Siapkan posting teaser buku untuk Instagram. Aku yang posting."},
+          {me:false,t:"Senin 09.48",v:1,text:"Paket posting siap. Setelah kamu posting, klik Sudah dan tempel link-nya. Aku lanjut menyiapkan listing Gumroad."}
+        ], pkg:{ fields:[["Gambar","teaser-momo.png (dari Bima, halaman 1)"],["Caption","Momo takut menyeberang sungai. Tapi hari ini, sahabatnya butuh bantuan di seberang sana… 🐢💛\n\nBuku cerita bergambar “Momo si Kura-kura Pemberani” segera hadir."],["Hashtag","#bukuanak #ceritaanak #bacaanbergambar #momokurakura"]],
+          steps:["Buka Instagram dan buat postingan baru","Unggah gambar teaser","Salin caption dan hashtag","Posting, lalu klik Sudah dan tempel link-nya"], link:true }},
+        { id:"t10", title:"Listing produk di Gumroad", state:"locked", after:"t9", thread:[
+          {me:true,t:"Senin 09.30",text:"Setelah teaser tayang, siapkan teks listing Gumroad."}]}
+      ]},
+    { id:"nadia", name:"Nadia", emoji:"🕵🏻‍♀️", role:"Editor", model:"Claude", prov:"claude", tools:["🧠 Menulis"], hours:"Setiap hari · 13.00–17.00", lateStart:true,
+      tasks:[{ id:"t8", title:"Cek konsistensi hal. 1–6", state:"queued", thread:[
+        {me:true,t:"Senin 09.55",text:"Cek apakah Momo terlihat sama di halaman 1–6."},
+        {me:false,t:"Senin 09.55",text:"Masuk antrean. Aku mulai saat jam kerjaku, 13.00."}]}]}
+  ]}
+];
+
+const pages = [
+  {n:1,s:"done",e:"🐢"},{n:2,s:"done",e:"🌳"},{n:3,s:"done",e:"🐸"},{n:4,s:"done",e:"🌧️"},{n:5,s:"revisi",e:"🐢"},{n:6,s:"done",e:"🌉"},
+  {n:7,s:"doing",e:""},{n:8,s:"todo",e:""},{n:9,s:"todo",e:""},{n:10,s:"todo",e:""},{n:11,s:"todo",e:""},{n:12,s:"todo",e:""}
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const workers = () => rooms.flatMap(r => r.workers.map(w => (w.room = r, w)));
+const findWorker = id => workers().find(x => x.id === id);
+const has = (w, s) => w.tasks.some(t => t.state === s);
+const pillText = {review:"Perlu review", human:"Tugas untukmu", doing:"Dikerjakan", paused:"Dijeda (break)", queued:"Antrean", locked:"🔒 Menunggu task sebelumnya", done:"Selesai"};
+
+/* Status worker diturunkan dari antreannya, bukan disetel manual. */
+function status(w){
+  if (state.night) return {k:"off", text:"🌙 Pulang, masuk lagi besok 08.00"};
+  if (w.lateStart) return {k:"off", text:"🌙 Masuk jam 13.00"};
+  if (has(w,"doing")) {
+    if (state.quota && w.prov === "claude") return {k:"break", text:"☕ Lagi break · kuota reset ±13.00"};
+    return {k:"working", text: w.tasks.find(t=>t.state==="doing")._rev ? "Merevisi: "+w.tasks.find(t=>t.state==="doing").title : (w.doing || "Mengerjakan: "+w.tasks.find(t=>t.state==="doing").title)};
+  }
+  const q = w.tasks.find(t => t.state==="review" && t.kind==="question");
+  if (q) return {k:"waiting", text:q.ask};
+  const h = w.tasks.find(t => t.state==="human");
+  if (h) return {k:"human", text:"📋 Menunggu kamu: "+h.title};
+  if (has(w,"review")) return {k:"idle", text:"Menunggu review-mu"};
+  if (has(w,"queued")) return {k:"working", text:"Mulai task berikutnya"};
+  return {k:"home", text:"🏠 Pulang "+(w.homeAt||NOW)+" · antrean kosong"};
+}
+const pending = w => w.tasks.filter(t => t.state==="review" || t.state==="human").length;
+
+function renderRooms(){
+  $("#rooms").innerHTML = rooms.map(r => {
+    const n = r.workers.reduce((a,w)=>a+pending(w),0);
+    return `<section class="room" aria-label="${esc(r.name)}">
+      <div class="roomhead"><div><h2>${esc(r.name)}</h2><div class="sub">${esc(r.sub)} · ${r.workers.length} orang${n?` · ${n} menunggumu`:""}</div></div>
+        <div class="actions">${r.storyboard?`<button class="btn warn" data-board="${r.id}">📖 Storyboard</button>`:""}<button class="btn" data-toast="Di versi nyata: tambah worker, pilih role, model AI, skill, dan jam kerja.">+ Worker</button></div></div>
+      <div class="desks">${r.workers.map(w => {
+        const s = status(w), p = pending(w);
+        return `<button class="desk st-${s.k} ${s.k==="off"||s.k==="home"?s.k:""}" data-worker="${w.id}" aria-label="${esc(w.name)}, ${esc(w.role)}. ${esc(s.text)}">
+          <span class="bubble ${s.k}">${esc(s.text)}</span>
+          <span class="avatar">${s.k==="home"?"🏠":w.emoji}<span class="status-dot"></span></span>
+          <span class="surface"><span class="pc">💻</span>${s.k==="break"?`<span class="cup">☕</span>`:""}${p?`<span class="stack">📄 ${p}</span>`:""}</span>
+          <span class="who">${esc(w.name)}</span><span class="role">${esc(w.role)}</span><span class="model">${esc(w.model)}</span>
+        </button>`}).join("")}</div></section>`;
+  }).join("");
+}
+
+function renderAttn(){
+  const all = workers().flatMap(w => w.tasks.map(t => ({w,t})));
+  const rev = all.filter(x => x.t.state==="review"), mine = all.filter(x => x.t.state==="human");
+  $("#attnCount").textContent = rev.length + mine.length;
+  const li = ({w,t}) => `<li><button class="item" data-worker="${w.id}" data-task="${t.id}"><span class="mini">${w.emoji}</span>
+    <span><b>${esc(t.title)}</b><small><span class="kind k-${t.kind}">${t.kind==="question"?"Pertanyaan":t.kind==="human"?"Kerjakan":"Review"}</span>${esc(w.name)} · ${esc(w.room.name)}</small></span></button></li>`;
+  $("#attnBody").innerHTML =
+    `<h3><span>📋 Tugas untukku</span><span>${mine.length}</span></h3><ul>${mine.length?mine.map(li).join(""):`<li class="empty">Tidak ada yang perlu kamu kerjakan.</li>`}</ul>
+     <h3><span>📄 Perlu review</span><span>${rev.length}</span></h3><ul>${rev.length?rev.map(li).join(""):`<li class="empty">Semua sudah direview ☕</li>`}</ul>`;
+}
+
+function openDrawer(html){ $("#drawer").innerHTML = html; $("#drawer").hidden = false; $("#scrim").hidden = false; }
+function closeDrawer(){ $("#drawer").hidden = true; $("#scrim").hidden = true; state.open = null; }
+
+function workerHead(w){
+  const s = status(w);
+  return `<div class="dhead"><span class="avatar st-${s.k}">${w.emoji}<span class="status-dot"></span></span>
+    <div class="meta"><h2>${esc(w.name)}</h2><div class="role">${esc(w.role)} · ${esc(w.room.name)}</div></div>
+    <button class="x" data-close aria-label="Tutup">✕</button></div>`;
+}
+
+function statusNote(w){
+  const s = status(w);
+  if (s.k==="home") return `<div class="note"><span>🏠 <b>${esc(w.name)} sudah pulang</b> sejak ${esc(w.homeAt||NOW)} karena antreannya kosong. Selama pulang, tidak ada token yang terpakai.</span>
+    <div class="row"><button class="btn primary sm" data-toast="Di versi nyata: tulis brief, lalu ${esc(w.name)} langsung kembali ke meja.">Beri task & panggil sekarang</button><button class="btn sm" data-toast="Di versi nyata: task disimpan dan dikerjakan besok saat jam kerja mulai.">Beri task untuk besok</button></div></div>`;
+  if (s.k==="break") return `<div class="note"><span>☕ <b>Lagi break.</b> Kuota langganan Claude sedang habis. Pekerjaan dijeda dan otomatis lanjut setelah kuota reset (±13.00). Worker yang memakai GPT tetap bekerja.</span></div>`;
+  if (s.k==="off") return `<div class="note"><span>${esc(s.text)}. Task baru masuk antrean dan tidak memakai token sampai jam kerja.</span></div>`;
+  return `<div class="note"><span>Sekarang: ${esc(s.text)}</span></div>`;
+}
+
+function showWorker(id){
+  const w = findWorker(id); state.open = {worker:id};
+  const order = {human:0,review:1,doing:2,queued:3,locked:4,done:5};
+  const tasks = [...w.tasks].sort((a,b)=>order[a.state]-order[b.state]);
+  openDrawer(workerHead(w) + `<div class="dbody">
+    ${statusNote(w)}
+    <dl class="facts"><dt>Model AI</dt><dd>${esc(w.model)}</dd><dt>Jam kerja</dt><dd>${esc(w.hours)}</dd>
+      ${w.quota?`<dt>Kuota gambar</dt><dd><div style="display:flex;align-items:center;gap:8px"><div class="meter" style="flex:1"><i style="width:${w.quota[0]/w.quota[1]*100}%"></i></div><span style="font-family:var(--f-mono);font-size:12px">${w.quota[0]}/${w.quota[1]} hari ini</span></div></dd>`:""}</dl>
+    <div><div class="sect">Skill</div><div class="chips">${w.tools.map(t=>`<span class="chip">${t}</span>`).join("")}</div></div>
+    <div><div class="sect">Antrean task</div><div class="tasks">${tasks.map(t=>{
+      const st = taskState(w,t);
+      const prev = t.after ? w.tasks.find(x=>x.id===t.after) : null;
+      return `<button class="task ${t.state==="locked"?"locked":""}" data-worker="${w.id}" data-task="${t.id}"><span class="t">${esc(t.title)}${prev&&t.state==="locked"?`<small>Mulai setelah kamu konfirmasi “${esc(prev.title)}”</small>`:""}</span><span class="pill p-${st}">${pillText[st]}</span></button>`}).join("")}</div></div>
+    ${status(w).k==="home"?"":`<button class="btn" data-toast="Di versi nyata: tulis brief task baru untuk ${esc(w.name)}. Task masuk ke ujung antrean.">+ Beri task baru</button>`}
+  </div>`);
+}
+const taskState = (w,t) => (t.state==="doing" && state.quota && w.prov==="claude" && !state.night) ? "paused" : t.state;
+
+function msgHtml(w, m){
+  const body = m.text.split("|").map(p=>`<p>${esc(p)}</p>`).join("");
+  const art = m.art ? `<div class="art" role="img" aria-label="Contoh lembar karakter"><div>🐢<small>depan</small></div><div>🐢<small>samping</small></div><div>🐢<small>belakang</small></div></div>` : "";
+  return `<div class="msg ${m.me?"me":"bot"}"><div class="from"><span>${m.me?"Kamu":esc(w.name)}</span><span>${esc(m.t)}</span>${m.v?`<span class="ver">v${m.v}</span>`:""}</div>${body}${art}</div>`;
+}
+
+function pkgHtml(t){
+  const p = t.pkg;
+  return `<div class="pkg"><h4>📋 Paket siap pakai</h4>
+    ${p.fields.map(([k,v],i)=>`<div class="field"><div class="fl"><span>${esc(k)}</span><button class="btn sm" data-copy="${t.id}:${i}">Salin</button></div><div class="fv" id="f-${t.id}-${i}">${esc(v)}</div></div>`).join("")}
+    <div><div class="sect" style="margin:4px 0 6px">Langkah</div><ul class="check">${p.steps.map((s,i)=>`<li><label><input type="checkbox" id="c-${t.id}-${i}"> ${esc(s)}</label></li>`).join("")}</ul></div></div>`;
+}
+
+function showTask(wid, tid){
+  const w = findWorker(wid), t = w.tasks.find(x=>x.id===tid); state.open = {worker:wid, task:tid};
+  const st = taskState(w,t);
+  const prev = t.after ? w.tasks.find(x=>x.id===t.after) : null;
+  let compose = "";
+  if (t.state==="review") compose = `<div class="compose">
+      <label for="rev" class="sect" style="margin:0">Catatan revisi</label>
+      <textarea id="rev" placeholder="Tulis revisi sepanjang yang kamu perlu…"></textarea>
+      <div class="row"><span class="hint">${status(w).k==="off"?"🌙 Di luar jam kerja: revisi masuk antrean.":""}</span>
+        <button class="btn" data-revise="${tid}" data-w="${wid}">Minta revisi</button>
+        <button class="btn primary" data-approve="${tid}" data-w="${wid}">Setujui</button></div></div>`;
+  if (t.state==="human") compose = `<div class="compose">
+      ${t.pkg.link?`<label for="proof" class="sect" style="margin:0">Link hasil (opsional)</label><input type="url" id="proof" placeholder="https://instagram.com/p/…">`:""}
+      <details><summary style="font-size:13px;color:var(--muted);cursor:pointer">Perlu diubah dulu sebelum kamu kerjakan?</summary>
+        <textarea id="rev" style="margin-top:8px" placeholder="Misal: caption-nya terlalu panjang, buat 2 kalimat saja."></textarea>
+        <div class="row" style="margin-top:8px"><button class="btn" data-revise="${tid}" data-w="${wid}">✏️ Kirim ke ${esc(w.name)} untuk diubah</button></div></details>
+      <div class="row"><span class="hint">${esc(w.name)} baru lanjut ke backlog berikutnya setelah kamu klik Sudah.</span>
+        <button class="btn" data-notyet="${tid}" data-w="${wid}">⏸️ Belum</button>
+        <button class="btn primary" data-did="${tid}" data-w="${wid}">✅ Sudah</button></div></div>`;
+  openDrawer(workerHead(w) + `<div class="dbody" id="tbody">
+      <button class="back" data-worker="${w.id}">← Semua task ${esc(w.name)}</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="font-size:18px;flex:1;min-width:0">${esc(t.title)}</h3><span class="pill p-${st}">${pillText[st]}</span></div>
+      ${t.state==="locked"&&prev?`<div class="note"><span>🔒 Task ini menunggu kamu menyelesaikan “${esc(prev.title)}”. ${esc(w.name)} tidak mengerjakan apa pun (dan tidak memakai token) sampai kamu klik Sudah di sana.</span></div>`:""}
+      ${st==="paused"?`<div class="note"><span>☕ Dijeda karena kuota Claude habis. Lanjut otomatis setelah reset (±13.00).</span></div>`:""}
+      <div class="thread">${t.thread.map(m=>msgHtml(w,m)).join("")}${t._typing&&st==="doing"?`<div class="typing">${esc(w.name)} sedang mengerjakan…</div>`:""}</div>
+      ${t.state==="human"?pkgHtml(t):""}
+    </div>${compose}`);
+  if (t.state!=="human"){ const b = $("#tbody"); b.scrollTop = b.scrollHeight; }
+}
+
+function showBoard(rid){
+  const r = rooms.find(x=>x.id===rid);
+  const label = {done:"✅ Disetujui", revisi:"✏️ Revisi", doing:"⏳ Digambar", todo:"· Belum mulai"};
+  const done = pages.filter(p=>p.s==="done").length;
+  openDrawer(`<div class="dhead"><span class="avatar">📖</span><div class="meta"><h2>Storyboard</h2><div class="role">${esc(r.sub)}</div></div><button class="x" data-close aria-label="Tutup">✕</button></div>
+    <div class="dbody">
+      <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>${done} dari ${pages.length} halaman disetujui</span><span style="font-family:var(--f-mono)">${Math.round(done/pages.length*100)}%</span></div><div class="meter"><i style="width:${done/pages.length*100}%"></i></div></div>
+      <div class="board">${pages.map(p=>`<button class="page" data-toast="Di versi nyata: buka halaman ${p.n} dengan teks, ilustrasi, dan thread revisinya."><div class="thumb ${p.e?"has":""}">${p.e||(p.s==="doing"?"⏳":"")}</div><div class="cap"><b>HAL. ${String(p.n).padStart(2,"0")}</b><span>${label[p.s]}</span></div></button>`).join("")}</div>
+      <div class="note"><span>Tokoh yang dikunci: <b>Momo</b> (lembar karakter v2, masih menunggu review). Ilustrator memakainya sebagai acuan di setiap halaman.</span></div>
+    </div>`);
+}
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._h); toast._h=setTimeout(()=>t.hidden=true,3600); }
+function refresh(){ renderRooms(); renderAttn(); }
+function reopen(){ if(!state.open) return; state.open.task ? showTask(state.open.worker,state.open.task) : showWorker(state.open.worker); }
+
+/* Jalankan task "doing" seolah-olah worker mengerjakannya, lalu kembalikan untuk direview. */
+function simulateWork(w, t, text){
+  t.state="doing"; t._typing=true; refresh(); reopen();
+  const finish = () => {
+    if (state.quota && w.prov==="claude"){ setTimeout(finish, 1500); return; }
+    t._typing=false; t._rev=false; t.state="review"; t.kind = t.kind==="human" ? "human" : "review";
+    const lastV = Math.max(0,...t.thread.map(m=>m.v||0));
+    t.thread.push({me:false,t:"Senin "+NOW,v:lastV+1,text, art:!!t.thread.find(m=>m.art)});
+    if (t.pkg) t.state="human";
+    refresh(); reopen(); toast(w.name+" mengirim hasil baru.");
+  };
+  setTimeout(finish, 2400);
+}
+
+document.addEventListener("click", e => {
+  const el = e.target.closest("button"); if(!el) return;
+  if (el.hasAttribute("data-close")) return closeDrawer();
+  if (el.id==="nightBtn"){ state.night=!state.night; el.setAttribute("aria-pressed",state.night); $("#clock").textContent=clockText(); refresh(); reopen(); return; }
+  if (el.id==="quotaBtn"){ state.quota=!state.quota; el.setAttribute("aria-pressed",state.quota); refresh(); reopen();
+    return toast(state.quota ? "Kuota Claude habis: worker Claude yang sedang bekerja istirahat ☕. Worker GPT tetap jalan." : "Kuota reset: worker Claude kembali bekerja."); }
+  if (el.dataset.toast) return toast(el.dataset.toast);
+  if (el.dataset.board) return showBoard(el.dataset.board);
+  if (el.dataset.copy){
+    const [tid,i] = el.dataset.copy.split(":"); const node = document.getElementById(`f-${tid}-${i}`);
+    const fallback = () => { const r=document.createRange(); r.selectNodeContents(node); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast("Teks sudah diblok. Tekan Cmd+C untuk menyalin."); };
+    try { navigator.clipboard.writeText(node.textContent).then(()=>toast("Disalin."), fallback); } catch(_) { fallback(); }
+    return;
+  }
+  if (el.dataset.approve){
+    const w=findWorker(el.dataset.w), t=w.tasks.find(x=>x.id===el.dataset.approve);
+    t.state="done"; t.thread.push({me:true,t:"Senin "+NOW,text:"✅ Disetujui."});
+    if (status(w).k==="home") w.homeAt = NOW;
+    refresh(); reopen();
+    return toast(status(w).k==="home" ? `Disetujui. Antrean ${w.name} kosong, jadi ${w.name} pulang 🏠` : "Disetujui dan dipindah ke Selesai.");
+  }
+  if (el.dataset.did){
+    const w=findWorker(el.dataset.w), t=w.tasks.find(x=>x.id===el.dataset.did);
+    const link = $("#proof") ? $("#proof").value.trim() : "";
+    t.state="done"; t.thread.push({me:true,t:"Senin "+NOW,text:"✅ Sudah kukerjakan."+(link?" Link: "+link:"")});
+    const next = w.tasks.find(x=>x.state==="locked" && x.after===t.id);
+    if (next){ next._typing=true; simulateWork(w, next, "(Contoh) Bagian ini sudah kusiapkan. Silakan direview."); return toast(`Tercatat. ${w.name} lanjut ke backlog berikutnya: “${next.title}”.`); }
+    if (status(w).k==="home") w.homeAt = NOW;
+    refresh(); reopen(); return toast("Tercatat sebagai selesai.");
+  }
+  if (el.dataset.notyet){
+    const w=findWorker(el.dataset.w); closeDrawer();
+    return toast(`Oke, tetap di daftarmu. ${w.name} menunggu dan tidak lanjut dulu.`);
+  }
+  if (el.dataset.revise){
+    const txt=$("#rev").value.trim(); if(!txt){ $("#rev").focus(); return toast("Tulis dulu catatan revisinya."); }
+    const w=findWorker(el.dataset.w), t=w.tasks.find(x=>x.id===el.dataset.revise);
+    t.thread.push({me:true,t:"Senin "+NOW,text:txt});
+    if (status(w).k==="off"){ t.state="queued"; t.thread.push({me:false,t:"Senin "+NOW,text:"Masuk antrean. Kukerjakan saat jam kerjaku mulai."}); refresh(); reopen(); return toast("Revisi masuk antrean, tidak memakai token sampai jam kerja."); }
+    t._rev=true; simulateWork(w, t, t.pkg ? "(Contoh) Paket sudah kuubah sesuai catatanmu." : "(Contoh) Versi baru sudah mengikuti catatanmu. Bagian yang berubah kutandai supaya mudah dicek.");
+    return;
+  }
+  if (el.dataset.task) return showTask(el.dataset.worker, el.dataset.task);
+  if (el.dataset.worker) return showWorker(el.dataset.worker);
+});
+document.addEventListener("keydown", e => { if(e.key==="Escape" && !$("#drawer").hidden) closeDrawer(); });
+$("#scrim").addEventListener("click", closeDrawer);
+
+const clockText = () => state.night ? "Senin · 20.00 · kantor tutup" : "Senin · "+NOW+" · jam kerja";
+$("#clock").textContent = clockText();
+refresh();
+</script>
