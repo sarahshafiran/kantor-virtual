@@ -5,7 +5,7 @@ Perkiraan waktu: 20–30 menit.
 
 ## Sebelum mulai (dikerjakan Sarah)
 - [ ] Undang Dan ke workspace di Multica (Settings → Members).
-- [ ] Undang akun GitHub Dan ke repo `kantor-virtual` (repo → Settings → Collaborators).
+- [ ] Undang akun GitHub Dan ke repo: https://github.com/sarahshafiran/kantor-virtual/settings/access → **Add people**.
 
 ## 1. Pasang tiga aplikasi
 Unduh dan pasang seperti aplikasi biasa (klik Next sampai selesai; pilihan bawaan sudah tepat):
@@ -22,9 +22,8 @@ Setelah Multica Desktop terpasang, **login dengan akun Multica milik Dan** (buka
 1. Buka menu Start, ketik **Git Bash**, lalu buka.
 2. Ketik perintah ini, lalu tekan Enter:
    ```
-   cd ~/Documents && git clone https://github.com/PEMILIK/kantor-virtual.git
+   cd ~/Documents && git clone https://github.com/sarahshafiran/kantor-virtual.git
    ```
-   (Sarah akan memberi alamat yang tepat sebagai ganti `PEMILIK`.)
 3. Kalau diminta login GitHub, pilih **Sign in with your browser** dan login dengan akun GitHub Dan.
 
 ## 3. Buka kantor
