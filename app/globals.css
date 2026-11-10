@@ -386,8 +386,11 @@ a.btn{text-decoration:none;display:inline-block}
 .flag.todo{background:var(--todo);color:#fff}
 .bubble.here{--b:var(--ok-soft);--bl:var(--ok);background:var(--b);border-color:var(--bl)}
 .deskwrap{position:relative;display:flex;justify-content:center}
-.chatbtn{position:absolute;top:50px;left:calc(50% + 46px);width:32px;height:32px;border-radius:50%;border:2px solid #2B1030;background:#FFEA00;font-size:15px;display:grid;place-items:center;box-shadow:var(--shadow);transition:transform .15s}
-.chatbtn:hover{transform:scale(1.1)}
+/* Penanda task di pojok kanan atas meja; tombol chat di pojok kiri bawah (teal, berbentuk balon). */
+.pixbox .flags.tasks{left:auto;right:-14px;top:-2px;flex-direction:column;align-items:flex-end}
+.chatbtn{position:absolute;top:108px;left:calc(50% - 90px);display:flex;align-items:center;gap:3px;padding:3px 8px 3px 6px;border-radius:12px 12px 12px 3px;border:2px solid #2B1030;background:#00D9C0;color:#2B1030;font:600 12px var(--f-display);box-shadow:2px 2px 0 #2B1030;transition:transform .15s}
+.chatbtn:hover{transform:translateY(-2px)}
+.chatbtn span{line-height:1}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .room{filter:brightness(.88)}}
 :root[data-theme="dark"] .room{filter:brightness(.88)}
 
@@ -433,3 +436,14 @@ header.top{border-bottom:3px solid var(--ink)}
 /* Label berlatar terang selalu bertulisan gelap, supaya tetap terbaca di mode gelap. */
 .bubble.review,.bubble.here,.bubble.human,.bubble.break,.bubble.failed,.bubble.waiting,.msg.me{color:#2B1030}
 .k-late,.k-fail{background:#E8264B;color:#fff}
+
+/* Pengingat kemampuan Mika di chat. */
+.mikahelp{border:2px solid var(--ink);border-radius:12px;background:var(--panel);box-shadow:3px 3px 0 var(--ink);padding:12px;display:flex;flex-direction:column;gap:10px}
+.mikahelp>b{font-family:var(--f-display);font-size:15px}
+.mh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.mh-item{display:flex;gap:8px;align-items:flex-start;text-align:left;border:2px solid var(--line);border-radius:10px;background:var(--floor);padding:8px;color:var(--ink);transition:border-color .15s,transform .15s}
+.mh-item:hover{border-color:var(--pink);transform:translateY(-1px)}
+.mh-item b{display:block;font-size:13px}
+.mh-item small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.mh-ic{font-size:20px;line-height:1}
+.mh-foot{color:var(--muted)}

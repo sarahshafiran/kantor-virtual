@@ -60,18 +60,18 @@ function DeskButton({ d, onOpen, onChat, walking }: { d: Desk; onOpen: () => voi
         <span className={`bubble ${d.state}`}>{d.bubble}</span>
         <span className="pixbox">
           <PixelDesk name={d.name} state={walking ? "away" : pixOf(d.state)} />
-          {(d.lateCount > 0 || d.riskCount > 0) && (
-            <span className="flags">
+          {(d.lateCount > 0 || d.riskCount > 0 || d.reviewCount > 0) && (
+            <span className="flags tasks">
               {d.lateCount > 0 && <span className="flag late" title="Telat">🔴 {d.lateCount}</span>}
               {d.riskCount > 0 && <span className="flag risk" title="Berisiko telat">🟠 {d.riskCount}</span>}
+              {d.reviewCount > 0 && <span className="flag rev" title="Menunggu review">📄 {d.reviewCount}</span>}
             </span>
           )}
-          {d.reviewCount > 0 && <span className="stack" title="Menunggu review">📄 {d.reviewCount}</span>}
         </span>
         <span className="who">{d.name}</span>
         <span className="model">{d.runtime}</span>
       </button>
-      <button className="chatbtn" onClick={onChat} aria-label={`Ngobrol dengan ${d.name}`} title={`Ngobrol dengan ${d.name}`}>💬</button>
+      <button className="chatbtn" onClick={onChat} aria-label={`Ngobrol dengan ${d.name}`} title={`Ngobrol dengan ${d.name}`}>💬<span>chat</span></button>
     </div>
   );
 }

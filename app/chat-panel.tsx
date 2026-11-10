@@ -10,6 +10,17 @@ type Msg = { id: string; mine: boolean; text: string; when: string; failed: stri
 
 const md = (t: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: (p) => <a {...p} target="_blank" rel="noreferrer" /> }}>{t}</ReactMarkdown>;
 
+/** Hal-hal yang bisa dibantu Mika (manajer kantor), ditampilkan sebagai pengingat di chat. */
+const MIKA_CAN = [
+  { icon: "💭", label: "Brainstorm ide", hint: "Lempar ide mentah, kita kembangkan bareng", prompt: "Aku mau brainstorm soal: " },
+  { icon: "🗂️", label: "Bikin project baru", hint: "Ruangan baru lengkap dengan rencananya", prompt: "Tolong bantu aku bikin project baru. Tujuannya: " },
+  { icon: "📋", label: "Bikin task baru", hint: "Mika pilihkan worker dan tenggatnya", prompt: "Tolong buatkan task baru: " },
+  { icon: "🧑‍💼", label: "Rekrut worker baru", hint: "Bikin agent baru dengan peran tertentu", prompt: "Aku butuh worker baru untuk peran: " },
+  { icon: "🎓", label: "Tambah keahlian worker", hint: "Tambah skill atau ubah instruksi worker", prompt: "Tolong tambahkan keahlian ini ke worker: " },
+  { icon: "⏰", label: "Bikin pekerjaan rutin", hint: "Task yang jalan sendiri tiap hari/minggu", prompt: "Aku mau ada pekerjaan rutin yang jalan otomatis: " },
+  { icon: "📊", label: "Cek kondisi tim", hint: "Siapa sibuk, apa yang telat, apa yang macet", prompt: "Gimana kondisi tim sekarang? Ada yang telat, macet, atau perlu aku putuskan?" },
+];
+
 /** Ngobrol santai dengan satu worker: tidak menghasilkan apa-apa sampai kamu minta. */
 export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onClose, onMakeTask }: {
   ws: string; agent: { id: string; name: string; emoji: string | null; role: string };
@@ -25,6 +36,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
   const [sending, setSending] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const body = useRef<HTMLDivElement>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     fetch(`/api/chat?ws=${ws}&agent=${agent.id}`).then(r => r.json()).then(j => {
@@ -44,7 +56,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
     const t = setInterval(() => load(sid).catch(() => {}), 3000);
     return () => clearInterval(t);
   }, [sid, working, load]);
-  useEffect(() => { requestAnimationFrame(() => body.current && (body.current.scrollTop = body.current.scrollHeight)); }, [msgs, sending, working]);
+  useEffect(() => { requestAnimationFrame(() => body.current && (body.current.scrollTop = body.current.scrollHeight)); }, [msgs, sending, working, showHelp]);
 
   async function send(content = text) {
     if (!content.trim() && !files.length) return;
@@ -80,14 +92,15 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
           {!sid && <option value="">Obrolan baru</option>}
         </select>
         <button className="btn sm" onClick={() => { setSid(null); setMsgs([]); }}>+ Obrolan baru</button>
+        {isMika && <button className="btn sm" onClick={() => setShowHelp(h => !h)} aria-expanded={showHelp}>💡 Mika bisa apa?</button>}
       </div>
 
       <div className="dbody" ref={body}>
         {err && <div className="note bad">{err}</div>}
         {msgs === null ? <div className="loading"><span className="spinner" /> Membuka obrolan…</div> : (
           <div className="thread">
-            {msgs.length === 0 && !sending && (
-              <div className="note"><span>Mulai saja ngobrol dengan {agent.name}: lempar ide, minta pendapat, atau minta contoh. {isMika ? "Mika tahu kondisi semua worker, jadi bisa membantu memecah ide jadi task untuk tim." : ""}</span></div>
+            {msgs.length === 0 && !sending && !isMika && (
+              <div className="note"><span>Mulai saja ngobrol dengan {agent.name}: lempar ide, minta pendapat, atau minta contoh.</span></div>
             )}
             {msgs.map(m => (
               <div key={m.id} className={`msg ${m.mine ? "me" : "bot"}`}>
@@ -98,6 +111,19 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
               </div>
             ))}
             {sending !== null && <div className="msg me sending"><div className="from"><span>Kamu</span><span><span className="spinner sm" /> mengirim…</span></div>{sending && <div className="md">{md(sending)}</div>}</div>}
+            {isMika && !sending && (msgs.length === 0 || showHelp) && (
+              <div className="mikahelp">
+                <b>👋 Hai! Ini yang bisa kita kerjakan bareng:</b>
+                <div className="mh-grid">
+                  {MIKA_CAN.map(c => (
+                    <button key={c.label} className="mh-item" onClick={() => { setText(c.prompt); setShowHelp(false); document.getElementById("chat-msg")?.focus(); }}>
+                      <span className="mh-ic">{c.icon}</span><span><b>{c.label}</b><small>{c.hint}</small></span>
+                    </button>
+                  ))}
+                </div>
+                <small className="mh-foot">Klik salah satu untuk mulai. Pesannya bisa kamu ubah dulu sebelum dikirim.</small>
+              </div>
+            )}
             {working && sending === null && (
               <div className="live live-running" role="status"><span className="dots"><i /><i /><i /></span>
                 {laptopOn ? `${agent.name} sedang mengetik…` : `🌙 Laptop mati. ${agent.name} menjawab saat laptop menyala.`}</div>
