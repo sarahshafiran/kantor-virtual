@@ -18,11 +18,16 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
   const [files, setFiles] = useState<File[]>([]);
   const [pending, setPending] = useState<{ text: string; files: string[] } | null>(null);
   const [watchUntil, setWatchUntil] = useState(0);
-  const [showBrief, setShowBrief] = useState(false);
+  // Bagian yang dibekukan di atas: tertutup sampai diklik, hanya satu yang terbuka.
+  const [top, setTop] = useState<null | "files" | "brief">(null);
   const [pick, setPick] = useState<string | null>(null);
-  const [shelfOpen, setShelfOpen] = useState(true);
-  const shelf = useRef<HTMLDivElement>(null);
-  const show = (fid: string) => { setPick(fid); setShelfOpen(true); shelf.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const [seen, setSeen] = useState<Set<string> | null>(null);
+  const seenKey = `kantor-seen:${id}`;
+  const markSeen = (ids: string[]) => {
+    const next = new Set([...(seen ?? []), ...ids]); setSeen(next);
+    try { localStorage.setItem(seenKey, JSON.stringify([...next])); } catch { /* penyimpanan browser tidak tersedia */ }
+  };
+  const show = (fid: string) => { setPick(fid); setTop("files"); };
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState("");
   const [confirm, setConfirm] = useState<null | "approve" | "done">(null);
@@ -45,6 +50,22 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
     setD(null); setErr(null); lastCount.current = 0;
     load().catch(e => setErr(String(e)));
   }, [load]);
+
+  // File yang sudah pernah kamu lihat (disimpan di browser ini). Saat task pertama kali dibuka, semua file dianggap sudah dilihat.
+  useEffect(() => {
+    if (!d || seen) return;
+    let stored: string[] | null = null;
+    try { const raw = localStorage.getItem(seenKey); stored = raw ? JSON.parse(raw) : null; } catch { stored = null; }
+    if (stored) setSeen(new Set(stored)); else markSeen(d.artifacts.map(a => a.id));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d]);
+  // Begitu rak dibuka, semua file di dalamnya dianggap sudah dilihat.
+  const [freshIds, setFreshIds] = useState<Set<string>>(new Set());
+  useEffect(() => { if (top === "files" && d && seen && d.artifacts.some(a => !seen.has(a.id))) {
+    setFreshIds(new Set(d.artifacts.filter(a => !seen.has(a.id)).map(a => a.id))); // tetap ditandai "Baru" selama rak terbuka
+    markSeen(d.artifacts.map(a => a.id)); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [top, d]);
 
   // Selalu buka di percakapan terakhir, dan turun lagi setiap ada pesan baru.
   useEffect(() => {
@@ -108,41 +129,48 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
   return (
     <div className="drawer wide" role="dialog" aria-modal="true" aria-label={d.title}>
       {head}
-      <div className="dbody" ref={body}>
+      <div className="pinbar">
         <div className={`situation m-${d.mode}`}>
           <b>{d.situation}</b>
           {d.dueText && <span className={`due ${d.dueFlag ?? "ok"}`}>{d.dueFlag === "late" ? "🔴 " : d.dueFlag === "risk" ? "🟠 " : "📅 "}{d.dueText}</span>}
         </div>
-
-        {d.artifacts.length > 0 && (
-          <div className="shelf" ref={shelf}>
-            <button className="shelf-head" onClick={() => setShelfOpen(!shelfOpen)} aria-expanded={shelfOpen}>
-              <span>📁 Hasil kerja & lampiran <small>({d.artifacts.length})</small></span><span>{shelfOpen ? "▾" : "▸"}</span>
-            </button>
-            {shelfOpen && (
-              <>
-                <div className="tiles">
-                  {d.artifacts.map((a, i) => (
-                    <button key={a.id} className="tile" aria-pressed={(pick ?? d.artifacts[0].id) === a.id} onClick={() => setPick(a.id)} title={a.name}>
-                      {a.image ? <img src={a.url} alt="" /> : <span className="tile-icon">{{ pdf: "📕", html: "🌐", table: "📊", doc: "📝", text: "📄", image: "🖼️", other: "📎" }[kindOf(a.name)]}</span>}
-                      <span className="tile-name">{a.name}</span>
-                      <small>{i === 0 ? "Terbaru · " : ""}{a.from}</small>
-                    </button>
-                  ))}
-                </div>
-                {(() => { const a = d.artifacts.find(x => x.id === (pick ?? d.artifacts[0].id))!; return <FilePreview key={a.id} f={a} />; })()}
-              </>
+        {(d.artifacts.length > 0 || d.brief) && (
+          <div className="pintabs">
+            {d.artifacts.length > 0 && (() => {
+              const fresh = seen ? d.artifacts.filter(a => !seen.has(a.id)).length : 0;
+              return (
+                <button className="pintab" aria-expanded={top === "files"} onClick={() => setTop(top === "files" ? null : "files")}>
+                  📁 Hasil kerja & lampiran <small>({d.artifacts.length})</small>
+                  {fresh > 0 && <span className="newbadge">{fresh} baru</span>}
+                  <span className="caret">{top === "files" ? "▾" : "▸"}</span>
+                </button>
+              );
+            })()}
+            {d.brief && (
+              <button className="pintab" aria-expanded={top === "brief"} onClick={() => setTop(top === "brief" ? null : "brief")}>
+                📋 Brief tugas <span className="caret">{top === "brief" ? "▾" : "▸"}</span>
+              </button>
             )}
           </div>
         )}
-
-        {d.brief && (
-          <div className="brief">
-            <button className="more" onClick={() => setShowBrief(!showBrief)}>{showBrief ? "▾ Sembunyikan brief" : "▸ Lihat brief tugas"}</button>
-            {showBrief && <div className="md">{md(d.brief)}</div>}
+        {top === "files" && d.artifacts.length > 0 && (
+          <div className="pinpanel">
+            <div className="tiles">
+              {d.artifacts.map((a, i) => (
+                <button key={a.id} className="tile" aria-pressed={(pick ?? d.artifacts[0].id) === a.id} onClick={() => setPick(a.id)} title={a.name}>
+                  {a.image ? <img src={a.url} alt="" /> : <span className="tile-icon">{{ pdf: "📕", html: "🌐", table: "📊", doc: "📝", text: "📄", image: "🖼️", other: "📎" }[kindOf(a.name)]}</span>}
+                  {freshIds.has(a.id) && <span className="newbadge tile-new">Baru</span>}
+                  <span className="tile-name">{a.name}</span>
+                  <small>{i === 0 ? "Terbaru · " : ""}{a.from} · {a.when}</small>
+                </button>
+              ))}
+            </div>
+            {(() => { const a = d.artifacts.find(x => x.id === (pick ?? d.artifacts[0].id)) ?? d.artifacts[0]; return <FilePreview key={a.id} f={a} />; })()}
           </div>
         )}
-
+        {top === "brief" && d.brief && <div className="pinpanel md">{md(d.brief)}</div>}
+      </div>
+      <div className="dbody" ref={body}>
         <div className="sect">Percakapan</div>
         <div className="thread">
           {d.messages.length === 0 && !pending && <p className="desc">Belum ada percakapan. Worker akan menulis hasilnya di sini.</p>}

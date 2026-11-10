@@ -341,3 +341,18 @@ a.btn{text-decoration:none;display:inline-block}
 .dbody > *{flex-shrink:0}
 .shelf .pv-img{max-height:320px;width:auto;object-fit:contain}
 .shelf .pv-frame{max-height:360px}
+/* bagian beku di atas panel task */
+.pinbar{flex:none;display:flex;flex-direction:column;gap:8px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+.pinbar .situation{padding:8px 12px;font-size:14px}
+.pintabs{display:flex;gap:8px;flex-wrap:wrap}
+.pintab{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--sunk);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600}
+.pintab[aria-expanded="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.pintab small{font-weight:400;color:var(--muted)}
+.pintab .caret{color:var(--muted);font-size:11px}
+.newbadge{background:#C2412D;color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px}
+.pinpanel{max-height:45vh;overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.pinpanel.md{padding:12px 14px}
+.pinpanel .pv{margin:0 12px 12px}
+.pinpanel .pv-img{max-height:300px;width:auto;object-fit:contain}
+.tile{position:relative}
+.tile-new{position:absolute;top:10px;left:10px}
