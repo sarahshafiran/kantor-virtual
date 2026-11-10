@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Office, Desk, TaskView, RunView } from "@/lib/office";
 import TaskPanel from "./task-panel";
@@ -8,6 +8,7 @@ import OfficeSwitch from "./office-switch";
 import FilePicker, { uploadAll } from "./file-picker";
 import ChatPanel from "./chat-panel";
 import PixelDesk, { type PixelState } from "./pixel-desk";
+import { HandoverLayer, useHandoverDetector, type Handover } from "./handover";
 
 const REFRESH_MS = 30_000;
 
@@ -50,14 +51,14 @@ function TaskRow({ t, onOpen, showWho }: { t: TaskView; onOpen: (id: string) => 
 const pixOf = (st: Desk["state"]): PixelState =>
   st === "working" ? "working" : st === "failed" ? "failed" : st === "break" ? "break" : st === "review" ? "review" : st === "ready" ? "ready" : "away";
 
-function DeskButton({ d, onOpen, onChat }: { d: Desk; onOpen: () => void; onChat: () => void }) {
+function DeskButton({ d, onOpen, onChat, walking }: { d: Desk; onOpen: () => void; onChat: () => void; walking?: boolean }) {
   const dim = d.state === "off" || d.state === "home" || d.state === "closed";
   return (
-    <div className="deskwrap">
+    <div className="deskwrap" data-desk={d.agentId}>
       <button className={`desk pix st-${d.state} ${dim ? "dim" : ""}`} onClick={onOpen} aria-label={`${d.name}. ${d.bubble}`}>
         <span className={`bubble ${d.state}`}>{d.bubble}</span>
         <span className="pixbox">
-          <PixelDesk name={d.name} state={pixOf(d.state)} />
+          <PixelDesk name={d.name} state={walking ? "away" : pixOf(d.state)} />
           {(d.lateCount > 0 || d.riskCount > 0) && (
             <span className="flags">
               {d.lateCount > 0 && <span className="flag late" title="Telat">🔴 {d.lateCount}</span>}
@@ -79,7 +80,7 @@ function HumanDesk({ name, at, review, tasks, onOpen }: { name: string; at?: str
   const here = mins < 5;
   const label = here ? "di kantor" : !at ? "belum datang" : mins < 60 ? `terakhir ${Math.round(mins)} mnt lalu` : mins < 1440 ? `terakhir ${Math.round(mins / 60)} jam lalu` : `terakhir ${Math.round(mins / 1440)} hari lalu`;
   return (
-    <div className="deskwrap">
+    <div className="deskwrap" data-desk={"person:" + name}>
       <button className={`desk pix human ${here ? "" : "dim"}`} onClick={onOpen} aria-label={`Meja ${name}. ${label}. ${review} perlu review, ${tasks} tugas.`}>
         <span className={`bubble ${here ? "here" : "closed"}`}>{label}</span>
         <span className="pixbox">
@@ -213,6 +214,24 @@ export default function OfficeView({ office, buildings, attention, people, seen 
   const allDesks = [...office.rooms.flatMap(r => r.desks), ...office.idleDesks];
   const mika = allDesks.find(d => d.name.toLowerCase() === "mika");
 
+  // Tahap 2: worker berjalan mengantar pekerjaan saat ada serah terima.
+  const officeRef = useRef<HTMLElement>(null);
+  const [walks, setWalks] = useState<(Handover & { key: string })[]>([]);
+  const walkingIds = useMemo(() => new Set(walks.map(w => w.from)), [walks]);
+  const here = (p: string) => !!seen[p] && Date.now() - Date.parse(seen[p]) < 5 * 60000;
+  const reviewer = people.find(here) ?? people[0] ?? null;
+  const nameOf = (k: string) => k.startsWith("person:") ? k.slice(7) : allDesks.find(d => d.agentId === k)?.name ?? "Worker";
+  const startWalks = useCallback((hs: Handover[]) => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setWalks(cur => [...cur, ...hs.filter(h => !cur.some(c => c.from === h.from)).map(h => ({ ...h, key: h.from + ":" + Date.now() + Math.random() }))]);
+    setToast(hs.map(h => `${h.fromName} mengantar "${h.title}" ke ${h.to.startsWith("person:") ? "meja " : ""}${h.toName}`).join(" · "));
+  }, []);
+  useHandoverDetector(office, reviewer, nameOf, startWalks);
+  useEffect(() => {
+    const f = (e: Event) => { const d = (e as CustomEvent).detail; startWalks([{ ...d, fromName: nameOf(d.from), toName: nameOf(d.to) }]); };
+    addEventListener("kantor:handover", f); return () => removeEventListener("kantor:handover", f);
+  });
+
   return (
     <>
       <header className="top">
@@ -247,7 +266,8 @@ export default function OfficeView({ office, buildings, attention, people, seen 
       </header>
 
       <main className="wrap">
-        <section className="office" aria-label="Denah kantor">
+        <section className="office" aria-label="Denah kantor" ref={officeRef}>
+          <HandoverLayer items={walks} layer={officeRef.current} onDone={k => setWalks(w => w.filter(x => x.key !== k))} />
           <div className="legend">
             <span><i className="dot" style={{ background: "var(--ok)" }} />Bekerja</span>
             <span><i className="dot" style={{ background: "var(--attn)" }} />Menunggu review</span>
@@ -271,14 +291,14 @@ export default function OfficeView({ office, buildings, attention, people, seen 
               <div className="roomhead">
                 <div><h2>{r.icon ? `${r.icon} ` : ""}{r.name}</h2>{r.progress && <div className="sub">{r.progress}</div>}</div>
               </div>
-              <div className="desks">{r.desks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} />)}</div>
+              <div className="desks">{r.desks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} walking={walkingIds.has(d.agentId)} />)}</div>
             </section>
           ))}
 
           {office.idleDesks.length > 0 && (
             <section className="room" aria-label="Ruang staf">
               <div className="roomhead"><div><h2>Ruang Staf</h2><div className="sub">Worker tanpa task di project mana pun</div></div></div>
-              <div className="desks">{office.idleDesks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} />)}</div>
+              <div className="desks">{office.idleDesks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} walking={walkingIds.has(d.agentId)} />)}</div>
             </section>
           )}
         </section>
