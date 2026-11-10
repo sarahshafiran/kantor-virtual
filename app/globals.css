@@ -483,3 +483,18 @@ header.top{border-bottom:3px solid var(--ink)}
 .tp-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .tp-mode{justify-content:center;padding:5px 4px;font-size:12px}
 .tp-note{color:var(--muted);font-size:11.5px}
+
+/* Tombol mengambang "Tanya Mika" */
+.mikafab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:20;
+  display:flex;align-items:center;gap:8px;padding:6px 14px 6px 6px;border-radius:999px;border:2px solid var(--outline);
+  background:var(--pink);color:var(--outline);box-shadow:3px 3px 0 var(--outline);transition:transform .15s;animation:mf-in .5s ease-out}
+.mikafab:hover{transform:translateY(-3px)}
+.mf-av{width:42px;height:42px;border-radius:50%;background:var(--yellow);border:2px solid var(--outline);display:grid;place-items:center;font-size:22px;overflow:hidden}
+.mf-av img{width:100%;height:100%;object-fit:cover}
+.mf-txt{display:flex;flex-direction:column;text-align:left;line-height:1.15}
+.mf-txt b{font-family:var(--f-display);font-size:15px}
+.mf-txt small{font-size:11px;opacity:.85}
+@keyframes mf-in{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:600px){.mf-txt small{display:none}}
+@media (prefers-reduced-motion:reduce){.mikafab{animation:none}}
+body{padding-bottom:84px} /* ruang untuk tombol Tanya Mika */

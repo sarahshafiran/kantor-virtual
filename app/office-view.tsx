@@ -247,7 +247,6 @@ export default function OfficeView({ office, buildings, attention, people, seen 
             ) : <span className="tag">{office.workspace}</span>}
           </div>
           <div className="chiprow">
-            {mika && <button className="btn sm" onClick={() => setChatWith(mika)}>💬 Ngobrol dengan Mika</button>}
             <OfficeSwitch key={office.workspaceId + String(office.switchOpen)} ws={office.workspaceId} name={office.workspace} switchOpen={office.switchOpen} laptopOn={office.open} parked={office.parked}
               onDone={msg => { setToast(msg); refresh(); }} />
             <span className="hgroup" aria-label="Mesin AI">
@@ -395,6 +394,13 @@ export default function OfficeView({ office, buildings, attention, people, seen 
           isMika={chatWith.name.toLowerCase() === "mika"} projectId={null} laptopOn={office.open}
           onClose={() => setChatWith(null)}
           onMakeTask={detail => { const d = chatWith; setChatWith(null); setOpenDesk(d); setDraft(detail); setAdding(true); }} />
+      )}
+      {/* Tombol mengambang untuk ngobrol dengan Mika, seperti tombol bantuan di situs web. */}
+      {mika && !chatWith && !openDesk && !openTask && !openHuman && (
+        <button className="mikafab" onClick={() => setChatWith(mika)} aria-label="Ngobrol dengan Mika, manajer kantor">
+          <span className="mf-av">{mika.avatar ? <img src={mika.avatar} alt="" /> : (mika.emoji ?? "🦄")}</span>
+          <span className="mf-txt"><b>Tanya Mika</b><small>brainstorm, task, worker baru</small></span>
+        </button>
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
       {openTask && <TaskPanel id={openTask.id} ws={openTask.ws} onClose={() => setOpenTask(null)} onChanged={refresh} />}

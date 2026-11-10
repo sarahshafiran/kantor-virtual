@@ -52,11 +52,12 @@ export default function ThemeToggle() {
   return (
     <div className="themepick" ref={box}>
       <button className="btn sm" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-haspopup="dialog" title="Ganti tema warna dan mode terang/gelap">
-        🎨 {cur.name} · {MODES.find(m => m.id === mode)!.label.split(" ")[0]}
+        🎨 Tema: {cur.name} {MODES.find(m => m.id === mode)!.label.split(" ")[0]}
       </button>
       {open && (
         <div className="tp-pop" role="dialog" aria-label="Pilih tema">
           <div className="tp-h">Tema warna</div>
+          <small className="tp-note">Ganti warna kantor sesuai seleramu.</small>
           <div className="tp-pals">
             {PALETTES.map(p => (
               <button key={p.id} className={`tp-pal ${p.id === pal ? "on" : ""}`} onClick={() => pickPal(p.id)} aria-pressed={p.id === pal}>
