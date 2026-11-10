@@ -1,7 +1,30 @@
 "use client";
 // Meja bergaya piksel: tokoh duduk di meja, layar menyala saat bekerja, cangkir kopi saat istirahat,
 // kursi kosong saat pulang. Semua gambar dibuat di sini (tanpa aset dari luar).
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+// Warna meja mengikuti tema yang dipilih (dibaca dari variabel CSS, lalu diubah jadi rgb biasa).
+const TONES = {
+  o: "var(--outline)", chair: "var(--purple)", top: "color-mix(in srgb,var(--pink) 30%,#fff)", front: "var(--pink)", stripe: "var(--blush)",
+  scrA: "var(--teal)", scrB: "color-mix(in srgb,var(--teal) 50%,#fff)", idle: "color-mix(in srgb,var(--purple) 45%,#fff)",
+  lamp: "var(--yellow)", cup: "var(--orange)", rev: "var(--yellow)", rev2: "color-mix(in srgb,var(--yellow) 30%,#fff)", dot: "var(--pink)",
+};
+type Tones = Record<keyof typeof TONES, string>;
+let cache: { key: string; t: Tones } | null = null;
+function tones(): Tones {
+  const d = document.documentElement, key = `${d.dataset.palette ?? ""}|${d.dataset.theme ?? ""}`;
+  if (cache?.key === key) return cache.t;
+  const el = document.createElement("i"); el.style.display = "none"; document.body.appendChild(el);
+  const t = {} as Tones;
+  for (const [k, v] of Object.entries(TONES)) { el.style.color = v; t[k as keyof Tones] = getComputedStyle(el).color; }
+  el.remove(); cache = { key, t }; return t;
+}
+/** Bertambah setiap kali tema diganti, supaya meja digambar ulang. */
+function useThemeVersion() {
+  const [v, setV] = useState(0);
+  useEffect(() => { const f = () => setV(x => x + 1); window.addEventListener("kantor:theme", f); return () => window.removeEventListener("kantor:theme", f); }, []);
+  return v;
+}
 
 const W = 48, H = 34, S = 3;
 
@@ -27,7 +50,9 @@ export type PixelState = "working" | "ready" | "review" | "failed" | "break" | "
 
 export default function PixelDesk({ name, state, human, papers = 0 }: { name: string; state: PixelState; human?: boolean; papers?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const themeV = useThemeVersion();
   useEffect(() => {
+    const T = tones();
     const cv = ref.current; if (!cv) return;
     const lo = document.createElement("canvas"); lo.width = W; lo.height = H;
     const c = lo.getContext("2d")!, X = cv.getContext("2d")!;
@@ -37,7 +62,7 @@ export default function PixelDesk({ name, state, human, papers = 0 }: { name: st
     const draw = (t: number) => {
       c.clearRect(0, 0, W, H);
       // kursi
-      r(22, 8, 13, 10, "#2B1030"); r(23, 9, 11, 8, "#A259FF");
+      r(22, 8, 13, 10, T.o); r(23, 9, 11, 8, T.chair);
       // tokoh
       if (seated) {
         const y = 7 + (state === "working" && Math.floor(t / 4) % 2 ? 1 : 0), x = 24;
@@ -46,30 +71,30 @@ export default function PixelDesk({ name, state, human, papers = 0 }: { name: st
         r(x + 1, y + 5, 7, 5, look.shirt); r(x, y + 6, 1, 4, look.skin); r(x + 8, y + 6, 1, 4, look.skin);
       }
       // meja
-      r(2, 17, 44, 13, "#2B1030"); r(3, 18, 42, 4, "#FFD1E6"); r(3, 22, 42, 7, "#FF69B4"); r(6, 24, 6, 1, "#FFF1F5"); r(5, 30, 3, 3, "#2B1030"); r(40, 30, 3, 3, "#2B1030");
+      r(2, 17, 44, 13, T.o); r(3, 18, 42, 4, T.top); r(3, 22, 42, 7, T.front); r(6, 24, 6, 1, T.stripe); r(5, 30, 3, 3, T.o); r(40, 30, 3, 3, T.o);
       if (!human) {
         // layar
-        r(7, 8, 13, 10, "#2B1030");
+        r(7, 8, 13, 10, T.o);
         const blink = Math.floor(t / 6) % 2;
-        const screen = state === "working" ? (Math.floor(t / 3) % 2 ? "#00D9C0" : "#7FF2E3")
+        const screen = state === "working" ? (Math.floor(t / 3) % 2 ? T.scrA : T.scrB)
           : state === "failed" ? (blink ? "#E24B4A" : "#791F1F")
-          : state === "away" ? "#4A3A50" : "#C9B8FF";
-        r(8, 9, 11, 7, screen); r(12, 17, 3, 1, "#2B1030");
-        if (state === "working") for (let i = 0; i < 3; i++) r(9 + i * 3, 10 + ((t + i) % 4), 2, 1, "#2B1030");
+          : state === "away" ? "#4A3A50" : T.idle;
+        r(8, 9, 11, 7, screen); r(12, 17, 3, 1, T.o);
+        if (state === "working") for (let i = 0; i < 3; i++) r(9 + i * 3, 10 + ((t + i) % 4), 2, 1, T.o);
       } else {
         // laptop & lampu meja
-        r(8, 14, 12, 4, "#2B1030"); r(9, 15, 10, 2, seated ? "#00D9C0" : "#6E5A73");
-        r(41, 10, 1, 8, "#2B1030"); r(38, 8, 7, 3, seated ? "#FFEA00" : "#9A8AA0");
+        r(8, 14, 12, 4, T.o); r(9, 15, 10, 2, seated ? T.scrA : "#6E5A73");
+        r(41, 10, 1, 8, T.o); r(38, 8, 7, 3, seated ? T.lamp : "#9A8AA0");
       }
-      if (state === "break") { r(36, 15, 4, 3, "#FF6B35"); r(40, 16, 1, 1, "#FF6B35"); r(37, 12 - (t % 3), 1, 1, "#d3d1c7"); r(38, 13 - ((t + 1) % 3), 1, 1, "#d3d1c7"); }
-      if (state === "review") { r(36, 15, 6, 3, "#FFEA00"); r(37, 14, 6, 1, "#FFF9C2"); }
-      for (let i = 0; i < Math.min(papers, 4); i++) { r(24 + i, 16 - i, 7, 2, "#ffffff"); r(30 + i, 16 - i, 1, 1, "#FF69B4"); }
+      if (state === "break") { r(36, 15, 4, 3, T.cup); r(40, 16, 1, 1, T.cup); r(37, 12 - (t % 3), 1, 1, "#d3d1c7"); r(38, 13 - ((t + 1) % 3), 1, 1, "#d3d1c7"); }
+      if (state === "review") { r(36, 15, 6, 3, T.rev); r(37, 14, 6, 1, T.rev2); }
+      for (let i = 0; i < Math.min(papers, 4); i++) { r(24 + i, 16 - i, 7, 2, "#ffffff"); r(30 + i, 16 - i, 1, 1, T.dot); }
       X.clearRect(0, 0, cv.width, cv.height); X.imageSmoothingEnabled = false; X.drawImage(lo, 0, 0, W * S, H * S);
     };
     draw(tick);
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches || !["working", "failed", "break"].includes(state);
     if (still) return;
     return subscribe(draw);
-  }, [name, state, human, papers]);
+  }, [name, state, human, papers, themeV]);
   return <canvas ref={ref} width={W * S} height={H * S} className="pixdesk" aria-hidden="true" />;
 }

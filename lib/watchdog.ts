@@ -64,7 +64,12 @@ export async function runWatchdog(opts: { notify?: boolean; dryRun?: boolean } =
     const switched: string[] = [];
     for (const q of quotas) {
       if (!outNow.has(q.runtimeId)) continue;
-      const spare = s.runtimes.find(r => r.id !== q.runtimeId && r.provider !== q.provider && r.status === "online" && !outNow.has(r.id));
+      // Mesin cadangan harus di laptop yang sama (pemilik & nama mesin sama), supaya pekerjaan
+      // tidak terlempar ke laptop orang lain dan memakai kuota langganannya.
+      const src = rtById.get(q.runtimeId);
+      const machine = (n?: string) => n?.match(/\(([^)]+)\)\s*$/)?.[1] ?? null;
+      const spare = s.runtimes.find(r => r.id !== q.runtimeId && r.provider !== q.provider && r.status === "online" && !outNow.has(r.id)
+        && r.owner_id === src?.owner_id && machine(r.name) === machine(src?.name));
       const movers = s.agents.filter(a => a.runtime_id === q.runtimeId && !a.archived_at && !mem.moved![a.id]);
       if (spare && movers.length) {
         for (const a of movers) {
