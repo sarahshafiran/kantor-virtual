@@ -357,3 +357,32 @@ a.btn{text-decoration:none;display:inline-block}
 .pinpanel .pv-img{max-height:300px;width:auto;object-fit:contain}
 .tile{position:relative}
 .tile-new{position:absolute;top:10px;left:10px}
+
+/* Kantor piksel: lantai ubin, dinding berjendela, meja bergambar piksel. */
+.room{border:6px solid #8a7558;border-radius:4px;padding:40px 20px 24px;
+  background:linear-gradient(#d8c7ab 0 22px,#b9a585 22px 26px,transparent 26px),
+    repeating-linear-gradient(90deg,transparent 0 60px,#9fc6e0 60px 96px,transparent 96px 200px) 0 4px/100% 14px no-repeat,
+    repeating-conic-gradient(#efe6d6 0 25%,#e8ddca 0 50%) 0 26px/48px 48px;background-color:#efe6d6}
+.room::after{background:#efe6d6}
+.room.team{background:linear-gradient(#d8c7ab 0 22px,#b9a585 22px 26px,transparent 26px),
+    repeating-conic-gradient(#f3dcd2 0 25%,#ecd0c4 0 50%) 0 26px/48px 48px;background-color:#f3dcd2}
+.room.team::after{background:#f3dcd2}
+.roomhead h2,.roomhead .sub{color:#2c2c2a}
+.roomhead .sub{color:#5f5e5a}
+.desk.pix{padding:44px 4px 4px}
+.desk.pix .who{color:#2c2c2a}
+.desk.pix .model{color:#5f5e5a}
+.desk.pix.dim{opacity:.62}
+.desk.pix.dim .pixdesk{filter:grayscale(.5) brightness(.9)}
+.pixbox{position:relative;display:block}
+.pixdesk{display:block;width:144px;height:102px;image-rendering:pixelated}
+.pixbox .flags{left:-14px;top:-2px}
+.pixbox .stack{right:-14px;top:-2px}
+.flag.rev{background:var(--attn);color:#1F1A0C}
+.flag.todo{background:var(--todo);color:#fff}
+.bubble.here{--b:var(--ok-soft);--bl:var(--ok);background:var(--b);border-color:var(--bl)}
+.deskwrap{position:relative;display:flex;justify-content:center}
+.chatbtn{position:absolute;top:50px;left:calc(50% + 46px);width:32px;height:32px;border-radius:50%;border:2px solid #8a7558;background:#fff;font-size:15px;display:grid;place-items:center;box-shadow:var(--shadow);transition:transform .15s}
+.chatbtn:hover{transform:scale(1.1)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .room{filter:brightness(.82)}}
+:root[data-theme="dark"] .room{filter:brightness(.82)}

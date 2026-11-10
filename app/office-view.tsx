@@ -7,6 +7,7 @@ import type { Building } from "./page";
 import OfficeSwitch from "./office-switch";
 import FilePicker, { uploadAll } from "./file-picker";
 import ChatPanel from "./chat-panel";
+import PixelDesk, { type PixelState } from "./pixel-desk";
 
 const REFRESH_MS = 30_000;
 
@@ -46,25 +47,54 @@ function TaskRow({ t, onOpen, showWho }: { t: TaskView; onOpen: (id: string) => 
   );
 }
 
-function DeskButton({ d, onOpen }: { d: Desk; onOpen: () => void }) {
-  const dim = d.state === "off" || d.state === "home";
+const pixOf = (st: Desk["state"]): PixelState =>
+  st === "working" ? "working" : st === "failed" ? "failed" : st === "break" ? "break" : st === "review" ? "review" : st === "ready" ? "ready" : "away";
+
+function DeskButton({ d, onOpen, onChat }: { d: Desk; onOpen: () => void; onChat: () => void }) {
+  const dim = d.state === "off" || d.state === "home" || d.state === "closed";
   return (
-    <button className={`desk st-${d.state} ${dim ? d.state : ""}`} onClick={onOpen} aria-label={`${d.name}. ${d.bubble}`}>
-      <span className={`bubble ${d.state}`}>{d.bubble}</span>
-      <Avatar d={d} home={d.state === "home"} />
-      <span className="surface">
-        <span className="pc">💻</span>
-        {(d.lateCount > 0 || d.riskCount > 0) && (
-          <span className="flags">
-            {d.lateCount > 0 && <span className="flag late" title="Telat">🔴 {d.lateCount}</span>}
-            {d.riskCount > 0 && <span className="flag risk" title="Berisiko telat">🟠 {d.riskCount}</span>}
-          </span>
-        )}
-        {d.reviewCount > 0 && <span className="stack">📄 {d.reviewCount}</span>}
-      </span>
-      <span className="who">{d.name}</span>
-      <span className="model">{d.runtime}</span>
-    </button>
+    <div className="deskwrap">
+      <button className={`desk pix st-${d.state} ${dim ? "dim" : ""}`} onClick={onOpen} aria-label={`${d.name}. ${d.bubble}`}>
+        <span className={`bubble ${d.state}`}>{d.bubble}</span>
+        <span className="pixbox">
+          <PixelDesk name={d.name} state={pixOf(d.state)} />
+          {(d.lateCount > 0 || d.riskCount > 0) && (
+            <span className="flags">
+              {d.lateCount > 0 && <span className="flag late" title="Telat">🔴 {d.lateCount}</span>}
+              {d.riskCount > 0 && <span className="flag risk" title="Berisiko telat">🟠 {d.riskCount}</span>}
+            </span>
+          )}
+          {d.reviewCount > 0 && <span className="stack" title="Menunggu review">📄 {d.reviewCount}</span>}
+        </span>
+        <span className="who">{d.name}</span>
+        <span className="model">{d.runtime}</span>
+      </button>
+      <button className="chatbtn" onClick={onChat} aria-label={`Ngobrol dengan ${d.name}`} title={`Ngobrol dengan ${d.name}`}>💬</button>
+    </div>
+  );
+}
+
+function HumanDesk({ name, at, review, tasks, onOpen }: { name: string; at?: string; review: number; tasks: number; onOpen: () => void }) {
+  const mins = at ? (Date.now() - Date.parse(at)) / 60000 : Infinity;
+  const here = mins < 5;
+  const label = here ? "di kantor" : !at ? "belum datang" : mins < 60 ? `terakhir ${Math.round(mins)} mnt lalu` : mins < 1440 ? `terakhir ${Math.round(mins / 60)} jam lalu` : `terakhir ${Math.round(mins / 1440)} hari lalu`;
+  return (
+    <div className="deskwrap">
+      <button className={`desk pix human ${here ? "" : "dim"}`} onClick={onOpen} aria-label={`Meja ${name}. ${label}. ${review} perlu review, ${tasks} tugas.`}>
+        <span className={`bubble ${here ? "here" : "closed"}`}>{label}</span>
+        <span className="pixbox">
+          <PixelDesk name={name} human state={here ? "present" : "away"} papers={review + tasks} />
+          {(review > 0 || tasks > 0) && (
+            <span className="flags">
+              {review > 0 && <span className="flag rev" title="Perlu review">📄 {review}</span>}
+              {tasks > 0 && <span className="flag todo" title="Tugas untukmu">📋 {tasks}</span>}
+            </span>
+          )}
+        </span>
+        <span className="who">Meja {name}</span>
+        <span className="model">Tim</span>
+      </button>
+    </div>
   );
 }
 
@@ -74,7 +104,7 @@ function AttnItem({ t, kind, onOpen, many }: { t: TaskView; kind: "late" | "risk
     <li>
       <button className="item" onClick={() => onOpen(t.id)}>
         <span><b>{t.title}</b>
-          <small><span className={`kind k-${kind}`}>{label}</span>{many ? `${t.wsName} · ` : ""}{t.assignee ?? "Belum ada yang ditugaskan"}{t.dueText ? ` · ${t.dueText}` : ""}</small>
+          <small><span className={`kind k-${kind}`}>{label}</span>{t.assignee ?? "Belum ada yang ditugaskan"}{t.dueText ? ` · ${t.dueText}` : ""}</small>
         </span>
       </button>
     </li>
@@ -141,6 +171,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
   const many = buildings.length > 1;
   const [adding, setAdding] = useState(false);
   const [chatWith, setChatWith] = useState<Desk | null>(null);
+  const [openHuman, setOpenHuman] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [person, setPerson] = useState<string>("Semua");
   const [toast, setToast] = useState<string | null>(null);
@@ -168,7 +199,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
     return () => clearInterval(t);
   }, [refresh]);
   useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape") { if (openTask) setOpenTask(null); else setOpenDesk(null); } };
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") { if (openTask) setOpenTask(null); else { setOpenDesk(null); setOpenHuman(null); } } };
     addEventListener("keydown", k); return () => removeEventListener("keydown", k);
   }, [openTask]);
 
@@ -178,7 +209,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
   const total = a.overdue.length + a.human.length + a.review.length + a.failed.length;
   const runs: RunView[] = openDesk ? office.agentsDetail[openDesk.agentId]?.runs ?? [] : [];
   const allTasks: TaskView[] = openDesk ? office.agentsDetail[openDesk.agentId]?.tasks ?? [] : [];
-  const closeAll = () => { setOpenTask(null); setOpenDesk(null); setAdding(false); setChatWith(null); };
+  const closeAll = () => { setOpenTask(null); setOpenDesk(null); setOpenHuman(null); setAdding(false); setChatWith(null); };
   const allDesks = [...office.rooms.flatMap(r => r.desks), ...office.idleDesks];
   const mika = allDesks.find(d => d.name.toLowerCase() === "mika");
 
@@ -227,19 +258,27 @@ export default function OfficeView({ office, buildings, attention, people, seen 
 
           {office.alerts.map(a => <div key={a} className="alert" role="alert">⚠️ {a}</div>)}
 
+          <section className="room team" aria-label="Meja tim">
+            <div className="roomhead"><div><h2>🪑 Meja tim</h2><div className="sub">Hasil kerja dan tugas untuk manusia mendarat di sini</div></div></div>
+            <div className="desks">{people.map(p => (
+              <HumanDesk key={p} name={p} at={seen[p]} review={a.review.length} tasks={a.human.filter(t => t.assignee === p).length}
+                onOpen={() => { setOpenHuman(p); setOpenDesk(null); }} />
+            ))}</div>
+          </section>
+
           {office.rooms.map(r => (
             <section key={r.id} className="room" aria-label={r.name}>
               <div className="roomhead">
                 <div><h2>{r.icon ? `${r.icon} ` : ""}{r.name}</h2>{r.progress && <div className="sub">{r.progress}</div>}</div>
               </div>
-              <div className="desks">{r.desks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} />)}</div>
+              <div className="desks">{r.desks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} />)}</div>
             </section>
           ))}
 
           {office.idleDesks.length > 0 && (
             <section className="room" aria-label="Ruang staf">
               <div className="roomhead"><div><h2>Ruang Staf</h2><div className="sub">Worker tanpa task di project mana pun</div></div></div>
-              <div className="desks">{office.idleDesks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} />)}</div>
+              <div className="desks">{office.idleDesks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} />)}</div>
             </section>
           )}
         </section>
@@ -272,7 +311,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
         </aside>
       </main>
 
-      {(openDesk || openTask || chatWith) && <div className="scrim" onClick={closeAll} />}
+      {(openDesk || openTask || chatWith || openHuman) && <div className="scrim" onClick={closeAll} />}
 
       {openDesk && !openTask && !chatWith && (
         <div className="drawer" role="dialog" aria-modal="true" aria-label={openDesk.name}>
@@ -287,8 +326,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
               <NewTaskForm ws={office.workspaceId} desk={openDesk} projects={office.projects} initialDetail={draft} onDone={id => { setAdding(false); setDraft(""); refresh(); if (id) setOpenTask(id); }} />
             ) : (
               <div className="chiprow">
-                <button className="btn primary" onClick={() => setChatWith(openDesk)}>💬 Ngobrol</button>
-                <button className="btn" onClick={() => { setDraft(""); setAdding(true); }}>+ Beri task baru</button>
+                <button className="btn primary" onClick={() => { setDraft(""); setAdding(true); }}>+ Beri task baru</button>
               </div>
             )}
             <div>
@@ -304,6 +342,27 @@ export default function OfficeView({ office, buildings, attention, people, seen 
                 </button>)) : <p className="desc">Belum pernah bekerja.</p>}</div>
             </div>
             {openDesk.description && <details className="extra"><summary>Tentang {openDesk.name}</summary><p className="desc">{openDesk.description}</p></details>}
+          </div>
+        </div>
+      )}
+
+      {openHuman && !openTask && !chatWith && (
+        <div className="drawer" role="dialog" aria-modal="true" aria-label={`Meja ${openHuman}`}>
+          <div className="dhead">
+            <span className="avatar">{openHuman.slice(0, 1).toUpperCase()}</span>
+            <div className="meta"><h2>Meja {openHuman}</h2><div className="role">{office.workspace}</div></div>
+            <button className="x" onClick={closeAll} aria-label="Tutup">✕</button>
+          </div>
+          <div className="dbody">
+            <div>
+              <div className="sect">📄 Perlu review ({a.review.length})</div>
+              <div className="tasks">{a.review.length ? a.review.map(t => <TaskRow key={t.id} t={t} showWho onOpen={id => setOpenTask(id, t.ws)} />) : <p className="desc">Tidak ada yang menunggu review ☕</p>}</div>
+            </div>
+            <div>
+              <div className="sect">📋 Tugas untuk {openHuman} ({a.human.filter(t => t.assignee === openHuman).length})</div>
+              <div className="tasks">{a.human.filter(t => t.assignee === openHuman).map(t => <TaskRow key={t.id} t={t} onOpen={id => setOpenTask(id, t.ws)} />)}
+                {!a.human.some(t => t.assignee === openHuman) && <p className="desc">Tidak ada tugas untuk {openHuman}.</p>}</div>
+            </div>
           </div>
         </div>
       )}
