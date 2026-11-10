@@ -196,6 +196,7 @@ main{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;padding-blo
 .due.late{background:#F9DEDA;color:#8E2414}
 .due.risk{background:var(--wait-soft);color:var(--ink)}
 .due.ok{color:var(--muted)}
+.due.done{background:#ECEAE4;color:var(--muted)}
 .chiprow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .rt{display:inline-flex;align-items:center;gap:6px;font-size:13px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--sunk)}
 .rt i{width:8px;height:8px;border-radius:50%;background:var(--off)}

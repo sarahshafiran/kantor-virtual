@@ -10,7 +10,7 @@ export type Message = {
 export type TaskDetail = {
   id: string; title: string; originalTitle: string; key: string; project: string | null; url: string;
   status: string; situation: string; mode: "review" | "human" | "working" | "waiting" | "closed";
-  due: string | null; dueText: string | null; dueFlag: "late" | "risk" | null;
+  due: string | null; dueText: string | null; dueFlag: "late" | "risk" | "done" | null;
   assignee: { kind: "agent" | "member" | null; id: string | null; name: string | null; emoji: string | null; online: boolean };
   brief: string; messages: Message[]; me: string;
   /** Semua file di task ini (hasil kerja + lampiran), terbaru dulu, untuk rak "Hasil kerja". */
@@ -58,12 +58,19 @@ export async function buildDetail(id: string, wsPick?: string | null): Promise<T
   }
   const artifacts = [...arts.values()].sort((a, b) => b.t - a.t).map(({ t: _t, ...rest }) => rest);
 
+  // Worker sudah menyelesaikan bagiannya (pesan terakhir dari worker, tidak ada run berjalan),
+  // tapi status task belum dipindah ke review. Kamu bisa langsung menyetujui atau minta revisi.
+  const lastMsg = messages[messages.length - 1];
+  const finished = issue.assignee_type === "agent" && (issue.status === "in_review" ||
+    (["todo", "in_progress"].includes(issue.status) && runs.length === 0 && lastMsg?.whoKind === "agent"));
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
   let dueFlag: TaskDetail["dueFlag"] = null, dueText: string | null = null;
   if (issue.due_date) {
     const d = Math.round((Date.parse(issue.due_date) - Date.parse(today)) / 86400000);
     const nice = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long" }).format(new Date(issue.due_date + "T00:00:00"));
-    if (d < 0) { dueFlag = "late"; dueText = `Telat ${-d} hari (tenggat ${nice})`; }
+    if (d < 0 && finished) { dueFlag = "done"; dueText = `Selesai, telat ${-d} hari (tenggat ${nice})`; }
+    else if (d < 0) { dueFlag = "late"; dueText = `Telat ${-d} hari (tenggat ${nice})`; }
+    else if (d <= 2 && finished) dueText = `Tenggat ${nice} · sudah dikerjakan`;
     else if (d <= 2) { dueFlag = "risk"; dueText = d === 0 ? "Tenggat hari ini" : d === 1 ? "Tenggat besok" : `Tenggat ${nice}`; }
     else dueText = `Tenggat ${nice}`;
   }
@@ -76,6 +83,7 @@ export async function buildDetail(id: string, wsPick?: string | null): Promise<T
   else if (issue.assignee_type === "member") { mode = "human"; situation = `Tugas untuk ${member?.name ?? "manusia"}. Agen menunggu sampai ini dikonfirmasi sudah dikerjakan.`; }
   else if (issue.status === "in_review") { mode = "review"; situation = `${aName} sudah selesai dan menunggu review-mu.`; }
   else if (lastIsAgentQuestion) { mode = "waiting"; situation = `${aName} menunggu jawabanmu.`; }
+  else if (finished) { mode = "review"; situation = `${aName} sudah menyelesaikan bagiannya. Kalau sudah oke, tekan ✅ Setujui untuk menutup task ini.`; }
   else if (issue.status === "in_progress") { mode = "working"; situation = runtime?.status === "online" ? `${aName} sedang mengerjakan ini.` : `${aName} akan lanjut saat kantor buka (laptop menyala).`; }
   else if (issue.status === "todo") { mode = "working"; situation = `Ada di antrean ${aName}, siap dikerjakan.`; }
   else { mode = "working"; situation = `Masih di backlog ${aName}, belum waktunya dikerjakan.`; }

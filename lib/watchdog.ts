@@ -96,7 +96,10 @@ export async function runWatchdog(opts: { notify?: boolean; dryRun?: boolean } =
     const hour = +new Intl.DateTimeFormat("en-US", { timeZone: tz(), hour: "2-digit", hourCycle: "h23" }).format(new Date());
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz() }).format(new Date());
     if (hour >= 7) {
-      const openIssues = s.issues.filter(i => !["done", "cancelled"].includes(i.status) && i.due_date);
+      // Task yang sudah diselesaikan workernya (menunggu review / run terakhir selesai) tidak dihitung telat.
+      const finished = (i: typeof s.issues[number]) => i.status === "in_review" || (i.assignee_type === "agent" &&
+        latest.get(i.id)?.status === "completed" && !s.runs.some(x => x.issue_id === i.id && ACTIVE.has(x.status)));
+      const openIssues = s.issues.filter(i => !["done", "cancelled"].includes(i.status) && i.due_date && !finished(i));
       const late = openIssues.filter(i => i.due_date! < today);
       const soon = openIssues.filter(i => i.due_date! >= today && Date.parse(i.due_date!) - Date.parse(today) <= 2 * 86400000);
       if (late.length || soon.length) {

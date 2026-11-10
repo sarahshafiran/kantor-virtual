@@ -32,7 +32,7 @@ function Presence({ name, at }: { name: string; at?: string }) {
 
 function DueChip({ t }: { t: TaskView }) {
   if (!t.dueText) return null;
-  return <span className={`due ${t.dueFlag ?? "ok"}`}>{t.dueFlag === "late" ? "🔴 " : t.dueFlag === "risk" ? "🟠 " : ""}{t.dueText}</span>;
+  return <span className={`due ${t.dueFlag ?? "ok"}`}>{t.dueFlag === "late" ? "🔴 " : t.dueFlag === "risk" ? "🟠 " : t.dueFlag === "done" ? "✓ " : ""}{t.dueText}</span>;
 }
 
 const pillOf = (s: string) => (s === "in_review" ? "review" : s === "in_progress" ? "doing" : "queued");

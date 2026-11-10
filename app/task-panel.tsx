@@ -132,7 +132,7 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
       <div className="pinbar">
         <div className={`situation m-${d.mode}`}>
           <b>{d.situation}</b>
-          {d.dueText && <span className={`due ${d.dueFlag ?? "ok"}`}>{d.dueFlag === "late" ? "🔴 " : d.dueFlag === "risk" ? "🟠 " : "📅 "}{d.dueText}</span>}
+          {d.dueText && <span className={`due ${d.dueFlag ?? "ok"}`}>{d.dueFlag === "late" ? "🔴 " : d.dueFlag === "risk" ? "🟠 " : d.dueFlag === "done" ? "✓ " : "📅 "}{d.dueText}</span>}
         </div>
         {(d.artifacts.length > 0 || d.brief) && (
           <div className="pintabs">

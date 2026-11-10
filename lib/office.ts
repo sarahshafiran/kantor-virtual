@@ -3,7 +3,7 @@ import type { Snapshot, Issue, Run, Agent } from "./multica";
 import { friendlyTitle } from "./titles";
 import { quotaStates, fmtTime } from "./quota";
 
-export type Due = "late" | "risk" | null;
+export type Due = "late" | "risk" | "done" | null; // done = lewat tenggat, tapi worker sudah menyelesaikan bagiannya
 export type TaskView = {
   id: string; key: string; title: string; status: string; statusLabel: string; due: string | null; dueFlag: Due;
   dueText: string | null; url: string; ws: string; wsName: string; assignee: string | null; assigneeType: "agent" | "member" | null; project: string | null;
@@ -89,12 +89,29 @@ export function buildOffice(s: Snapshot): Office {
   const switchOpen = s.kantor.open !== false;
   const quota = new Map(quotaStates(s).map(q => [q.runtimeId, q]));
 
+  // Run terakhir per task, dan task yang sedang dikerjakan/antre.
+  const latestByIssue = new Map<string, Run>();
+  const activeIssues = new Set<string>();
+  for (const r of s.runs) {
+    if (!r.issue_id) continue;
+    if (ACTIVE_RUN.has(r.status)) activeIssues.add(r.issue_id);
+    const cur = latestByIssue.get(r.issue_id);
+    if (!cur || Date.parse(r.created_at) > Date.parse(cur.created_at)) latestByIssue.set(r.issue_id, r);
+  }
+  // Worker sudah menyelesaikan bagiannya: hasil dikirim untuk review, atau run terakhirnya selesai
+  // dan tidak ada yang sedang berjalan. Task seperti ini tidak lagi ditandai merah/oranye.
+  const workerFinished = (i: Issue) => i.assignee_type === "agent" && (i.status === "in_review" ||
+    (["todo", "in_progress"].includes(i.status) && !activeIssues.has(i.id) && latestByIssue.get(i.id)?.status === "completed"));
+
   const view = (i: Issue): TaskView => {
     let dueFlag: Due = null, dueText: string | null = null;
     if (i.due_date) {
       const d = daysBetween(today, i.due_date);
       const notStarted = i.status === "backlog" || i.status === "todo";
-      if (d < 0) { dueFlag = "late"; dueText = `Telat ${-d} hari`; }
+      const finished = workerFinished(i);
+      if (finished && d < 0) { dueFlag = "done"; dueText = `Selesai, telat ${-d} hari` + (i.status === "in_review" ? " · menunggu review" : ""); }
+      else if (finished && d <= 2) dueText = `${fmtDate(i.due_date)} · sudah dikerjakan` + (i.status === "in_review" ? ", menunggu review" : "");
+      else if (d < 0) { dueFlag = "late"; dueText = `Telat ${-d} hari`; }
       else if (d <= 2) {
         dueFlag = "risk";
         dueText = (d === 0 ? "Jatuh tempo hari ini" : d === 1 ? "Jatuh tempo besok" : `Jatuh tempo ${fmtDate(i.due_date)}`) +
@@ -131,7 +148,7 @@ export function buildOffice(s: Snapshot): Office {
     const last = runs[0];
     const mine = open.filter(i => i.assignee_type === "agent" && i.assignee_id === a.id);
     const review = mine.filter(i => i.status === "in_review");
-    const ready = mine.filter(i => i.status === "todo" || i.status === "in_progress");
+    const ready = mine.filter(i => (i.status === "todo" || i.status === "in_progress") && !workerFinished(i));
     let state: DeskState, bubble: string;
     const parkedMine = mine.filter(i => (i.metadata ?? {}).kantor_parked).length;
     if (!switchOpen && !active) { state = "closed"; bubble = parkedMine ? `🔒 Kantor tutup · ${parkedMine} task menunggu` : "🔒 Kantor tutup"; }
@@ -159,8 +176,9 @@ export function buildOffice(s: Snapshot): Office {
   };
 
   const order: Record<string, number> = { in_review: 0, in_progress: 1, todo: 2, backlog: 3 };
+  const rank = (t: TaskView) => (t.dueFlag === "late" ? 0 : t.dueFlag === "risk" ? 1 : 2);
   const sortTasks = (t: TaskView[]) => t.sort((a, b) =>
-    (a.dueFlag === "late" ? 0 : a.dueFlag === "risk" ? 1 : 2) - (b.dueFlag === "late" ? 0 : b.dueFlag === "risk" ? 1 : 2) ||
+    rank(a) - rank(b) ||
     (order[a.status] ?? 9) - (order[b.status] ?? 9) || String(a.due).localeCompare(String(b.due)));
 
   const makeDesk = (a: Agent, issues: Issue[]): Desk => {
@@ -187,12 +205,6 @@ export function buildOffice(s: Snapshot): Office {
 
   const allViews = open.map(view);
   // Gagal hanya ditampilkan kalau itu kejadian terakhir untuk task tersebut dan task-nya masih terbuka.
-  const latestByIssue = new Map<string, Run>();
-  for (const r of s.runs) {
-    if (!r.issue_id) continue;
-    const cur = latestByIssue.get(r.issue_id);
-    if (!cur || Date.parse(r.created_at) > Date.parse(cur.created_at)) latestByIssue.set(r.issue_id, r);
-  }
   const openIds = new Set(open.map(i => i.id));
   const failed = [...latestByIssue.values()]
     .filter(r => r.status === "failed" && openIds.has(r.issue_id!) && issueById.get(r.issue_id!)?.status !== "in_review"
@@ -224,7 +236,7 @@ export function buildOffice(s: Snapshot): Office {
       // Setiap task hanya muncul di satu bagian, supaya daftar tidak dobel.
       human: sortTasks(allViews.filter(t => t.assigneeType === "member")),
       review: sortTasks(allViews.filter(t => t.status === "in_review" && t.assigneeType !== "member")),
-      overdue: sortTasks(allViews.filter(t => t.dueFlag && t.assigneeType !== "member" && t.status !== "in_review")),
+      overdue: sortTasks(allViews.filter(t => (t.dueFlag === "late" || t.dueFlag === "risk") && t.assigneeType !== "member" && t.status !== "in_review")),
       failed,
     },
     people: [...new Set(s.members.map(m => m.name))],
