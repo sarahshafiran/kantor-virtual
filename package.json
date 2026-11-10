@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "penjaga": "tsx --conditions=react-server scripts/penjaga.ts",
     "penjaga:uji": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/penjaga.ts --uji",
-    "telegram:cek": "tsx --env-file-if-exists=.env.local scripts/telegram-cek.ts"
+    "telegram:cek": "tsx --env-file-if-exists=.env.local scripts/telegram-cek.ts",
+    "telegram:tes": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/telegram-tes.ts"
   },
   "dependencies": {
     "next": "15.5.28",

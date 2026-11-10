@@ -7,7 +7,7 @@ import "server-only";
 import { workspaces, loadWorkspace, rerunIssue, updateAgent, call_ as call, type Run, type Snapshot, type Moved } from "./multica";
 import { isQuotaError, isLoginError, quotaResetAt, fmtTime, quotaStates } from "./quota";
 import { friendlyTitle } from "./titles";
-import { telegram, telegramReady } from "./telegram";
+import { telegram, telegramReady, botFor } from "./telegram";
 
 type Memory = { sent?: Record<string, string>; retried?: Record<string, string>; started?: string; moved?: Moved };
 const ACTIVE = new Set(["queued", "dispatched", "running", "in_progress", "preparing", "started"]);
@@ -39,12 +39,13 @@ export async function runWatchdog(opts: { notify?: boolean; dryRun?: boolean } =
     const now = Date.now();
     // Notifikasi hanya kalau Telegram sudah disambungkan. Saat pertama kali tersambung,
     // keadaan yang sudah ada dicatat diam-diam supaya tidak membanjiri Telegram.
-    const canSend = notify && telegramReady();
+    const tg = { id: w.id, slug: w.slug, name: w.name, members: s.members.map(m => m.name) };
+    const canSend = notify && telegramReady(tg);
     const firstRun = canSend && !mem.started;
     if (canSend && !mem.started) mem.started = new Date().toISOString();
     const once = async (key: string, text: string, onlyName?: string | null) => {
       if (!canSend || mem.sent![key]) return;
-      if (!firstRun || key.startsWith("digest:")) await telegram(text, onlyName);
+      if (!firstRun || key.startsWith("digest:")) await telegram(text, onlyName, tg);
       mem.sent![key] = new Date().toISOString();
     };
     const open = s.kantor.open !== false;
@@ -156,7 +157,7 @@ export async function runWatchdog(opts: { notify?: boolean; dryRun?: boolean } =
 
     if (dry) {
       for (const q of quotaStates(s)) report.push(`[uji] kuota ${q.provider} habis, reset ${q.resetAt ? fmtTime(new Date(q.resetAt)) : "?"}`);
-      report.push(`[uji] telegram ${telegramReady() ? "tersambung" : "belum disambungkan"}`);
+      report.push(`[uji] telegram ${w.name}: ${!telegramReady(tg) ? "belum disambungkan" : botFor(tg)?.own ? "bot khusus kantor ini" : "bot utama (bersama)"}`);
       continue;
     }
     await writeMemory(w.id, mem);

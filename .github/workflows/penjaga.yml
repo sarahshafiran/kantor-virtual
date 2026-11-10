@@ -19,4 +19,5 @@ jobs:
           MULTICA_TOKEN: ${{ secrets.MULTICA_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHATS: ${{ secrets.TELEGRAM_CHATS }}
+          TELEGRAM_BOTS: ${{ secrets.TELEGRAM_BOTS }}
           KANTOR_TIMEZONE: Asia/Jakarta
