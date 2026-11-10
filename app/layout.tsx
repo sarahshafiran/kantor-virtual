@@ -6,13 +6,16 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <head>
+        {/* Pasang mode terang/gelap pilihan sebelum halaman tampil, supaya tidak berkedip. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var t=localStorage.getItem("kantor-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}` }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" />
       </head>
-      <body>{children}</body>
+      {/* Ekstensi browser (mis. Grammarly) menambah atribut di <body>; abaikan peringatannya. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

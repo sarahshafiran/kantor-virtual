@@ -430,3 +430,6 @@ header.top{border-bottom:3px solid var(--ink)}
 .rt{border:2px solid var(--ink)}
 .legend{font-family:var(--f-display)}
 .attn .ah .count{background:var(--pink);color:#2B1030;border:2px solid #2B1030}
+/* Label berlatar terang selalu bertulisan gelap, supaya tetap terbaca di mode gelap. */
+.bubble.review,.bubble.here,.bubble.human,.bubble.break,.bubble.failed,.bubble.waiting,.msg.me{color:#2B1030}
+.k-late,.k-fail{background:#E8264B;color:#fff}

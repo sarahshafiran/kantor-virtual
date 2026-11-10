@@ -5,6 +5,7 @@ import type { Office, Desk, TaskView, RunView } from "@/lib/office";
 import TaskPanel from "./task-panel";
 import type { Building } from "./page";
 import OfficeSwitch from "./office-switch";
+import ThemeToggle from "./theme-toggle";
 import FilePicker, { uploadAll } from "./file-picker";
 import ChatPanel from "./chat-panel";
 import PixelDesk, { type PixelState } from "./pixel-desk";
@@ -260,6 +261,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
               <span className="hlabel">Tim</span>
               {people.map(p => <Presence key={p} name={p} at={seen[p]} />)}
             </span>
+            <ThemeToggle />
             <span className="clock">{refreshing ? <><span className="spinner sm" /> Memperbarui…</> : `Diperbarui ${office.updatedAt}`}</span>
           </div>
         </div>
