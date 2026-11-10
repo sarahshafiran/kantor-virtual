@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 /** Beri task baru ke worker. */
 export async function POST(req: Request) {
   const b = (await req.json()) as { files?: string[]; ws?: string; agentId: string; title: string; detail?: string; due?: string; projectId?: string; now?: boolean };
-  if (!b.title?.trim()) return NextResponse.json({ error: "Judul task masih kosong." }, { status: 400 });
+  // Judul kosong: ambil baris pertama detail (tanpa tanda markdown) sebagai judul.
+  if (!b.title?.trim()) b.title = (b.detail ?? "").split("\n").map(l => l.replace(/^[\s#>*\-\d.)]+/, "").replace(/[*_`]/g, "").trim()).find(Boolean)?.slice(0, 80) ?? "";
+  if (!b.title?.trim()) return NextResponse.json({ error: "Isi judul atau detail task dulu." }, { status: 400 });
   try {
     const closed = (await kantorSettings(b.ws ?? null)).open === false;
     const created = await createIssue(b.ws ?? null, {

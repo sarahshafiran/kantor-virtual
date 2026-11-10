@@ -142,7 +142,7 @@ function NewTaskForm({ ws, desk, projects, onDone, initialDetail = "" }: { initi
   return (
     <form className="newtask" onSubmit={e => { e.preventDefault(); submit(true); }}>
       <label htmlFor="nt-title" className="sect">Task baru untuk {desk.name}</label>
-      <input id="nt-title" className="input" placeholder="Contoh: Tulis 3 ide caption untuk teaser Instagram" value={title} onChange={e => setTitle(e.target.value)} />
+      <input id="nt-title" className="input" placeholder={detail.trim() ? "Judul (boleh kosong, nanti diambil dari detail)" : "Contoh: Tulis 3 ide caption untuk teaser Instagram"} value={title} onChange={e => setTitle(e.target.value)} />
       <textarea id="nt-detail" placeholder="Detail atau arahan (opsional)" value={detail} onChange={e => setDetail(e.target.value)}
         onPaste={e => { const p = [...e.clipboardData.files]; if (p.length) { e.preventDefault(); setFiles([...files, ...p]); } }} />
       <FilePicker files={files} onChange={setFiles} />
@@ -151,13 +151,14 @@ function NewTaskForm({ ws, desk, projects, onDone, initialDetail = "" }: { initi
         <label className="desc" htmlFor="nt-proj">Ruangan</label>
         <select id="nt-proj" className="input" value={projectId} onChange={e => setProjectId(e.target.value)} style={{ width: "auto" }}>
           {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          <option value="">🏢 Ruang Staf (tanpa ruangan)</option>
         </select>
       </div>
       {err && <div className="note bad">{err}</div>}
       <div className="row">
         <button type="button" className="btn" onClick={() => onDone(null)}>Batal</button>
-        <button type="button" className="btn" disabled={!title.trim() || busy} onClick={() => submit(false)}>Simpan untuk nanti</button>
-        <button className="btn primary" disabled={!title.trim() || busy}>{busy ? <><span className="spinner sm" /> Menyimpan…</> : "Kerjakan sekarang"}</button>
+        <button type="button" className="btn" disabled={(!title.trim() && !detail.trim()) || busy} onClick={() => submit(false)}>Simpan untuk nanti</button>
+        <button className="btn primary" disabled={(!title.trim() && !detail.trim()) || busy}>{busy ? <><span className="spinner sm" /> Menyimpan…</> : "Kerjakan sekarang"}</button>
       </div>
     </form>
   );
@@ -299,7 +300,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
 
           {office.idleDesks.length > 0 && (
             <section className="room" aria-label="Ruang staf">
-              <div className="roomhead"><div><h2>Ruang Staf</h2><div className="sub">Worker tanpa task di project mana pun</div></div></div>
+              <div className="roomhead"><div><h2>Ruang Staf</h2><div className="sub">Task tanpa ruangan, dan worker yang sedang tidak punya project</div></div></div>
               <div className="desks">{office.idleDesks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} walking={walkingIds.has(d.agentId)} />)}</div>
             </section>
           )}

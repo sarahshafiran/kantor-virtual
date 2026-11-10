@@ -200,7 +200,8 @@ export function buildOffice(s: Snapshot): Office {
   }).filter(r => r.desks.length);
 
   const seated = new Set(rooms.flatMap(r => r.desks.map(d => d.agentId)));
-  const idleDesks = s.agents.filter(a => !seated.has(a.id))
+  // Ruang Staf: worker tanpa project, dan worker yang punya task tanpa ruangan.
+  const idleDesks = s.agents.filter(a => !seated.has(a.id) || agentIssues.some(i => i.assignee_id === a.id && !i.project_id))
     .map(a => makeDesk(a, agentIssues.filter(i => i.assignee_id === a.id && !i.project_id)));
 
   const allViews = open.map(view);
