@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { TaskDetail } from "@/lib/detail";
 import FilePicker, { uploadAll } from "./file-picker";
-import FilePreview from "./file-preview";
+import FilePreview, { kindOf } from "./file-preview";
 
 const md = (text: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: (p) => <a {...p} target="_blank" rel="noreferrer" /> }}>{text}</ReactMarkdown>;
 const POLL_MS = 4000;
@@ -19,6 +19,10 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
   const [pending, setPending] = useState<{ text: string; files: string[] } | null>(null);
   const [watchUntil, setWatchUntil] = useState(0);
   const [showBrief, setShowBrief] = useState(false);
+  const [pick, setPick] = useState<string | null>(null);
+  const [shelfOpen, setShelfOpen] = useState(true);
+  const shelf = useRef<HTMLDivElement>(null);
+  const show = (fid: string) => { setPick(fid); setShelfOpen(true); shelf.current?.scrollIntoView({ behavior: "smooth", block: "start" }); };
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState("");
   const [confirm, setConfirm] = useState<null | "approve" | "done">(null);
@@ -110,6 +114,28 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
           {d.dueText && <span className={`due ${d.dueFlag ?? "ok"}`}>{d.dueFlag === "late" ? "🔴 " : d.dueFlag === "risk" ? "🟠 " : "📅 "}{d.dueText}</span>}
         </div>
 
+        {d.artifacts.length > 0 && (
+          <div className="shelf" ref={shelf}>
+            <button className="shelf-head" onClick={() => setShelfOpen(!shelfOpen)} aria-expanded={shelfOpen}>
+              <span>📁 Hasil kerja & lampiran <small>({d.artifacts.length})</small></span><span>{shelfOpen ? "▾" : "▸"}</span>
+            </button>
+            {shelfOpen && (
+              <>
+                <div className="tiles">
+                  {d.artifacts.map((a, i) => (
+                    <button key={a.id} className="tile" aria-pressed={(pick ?? d.artifacts[0].id) === a.id} onClick={() => setPick(a.id)} title={a.name}>
+                      {a.image ? <img src={a.url} alt="" /> : <span className="tile-icon">{{ pdf: "📕", html: "🌐", table: "📊", doc: "📝", text: "📄", image: "🖼️", other: "📎" }[kindOf(a.name)]}</span>}
+                      <span className="tile-name">{a.name}</span>
+                      <small>{i === 0 ? "Terbaru · " : ""}{a.from}</small>
+                    </button>
+                  ))}
+                </div>
+                {(() => { const a = d.artifacts.find(x => x.id === (pick ?? d.artifacts[0].id))!; return <FilePreview key={a.id} f={a} />; })()}
+              </>
+            )}
+          </div>
+        )}
+
         {d.brief && (
           <div className="brief">
             <button className="more" onClick={() => setShowBrief(!showBrief)}>{showBrief ? "▾ Sembunyikan brief" : "▸ Lihat brief tugas"}</button>
@@ -124,8 +150,12 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
             <div key={m.id} className={`msg ${m.whoKind === "member" ? "me" : "bot"}`}>
               <div className="from"><span>{m.emoji ? `${m.emoji} ` : ""}{m.who}</span><span>{m.when}</span></div>
               {m.text && <div className="md">{md(m.text)}</div>}
-              {m.images.length > 0 && <div className="gallery">{m.images.map(i => <a key={i.url} href={i.url} target="_blank" rel="noreferrer"><img src={i.url} alt={i.name} /></a>)}</div>}
-              {m.files.map(f => <FilePreview key={f.id} f={f} />)}
+              {(m.images.length > 0 || m.files.length > 0) && (
+                <div className="minifiles">
+                  {m.images.map(f => <button key={f.id} className="mini-img" onClick={() => show(f.id)} title={`Lihat ${f.name}`}><img src={f.url} alt={f.name} /></button>)}
+                  {m.files.map(f => <button key={f.id} className="chip" onClick={() => show(f.id)}>📎 {f.name}</button>)}
+                </div>
+              )}
             </div>
           ))}
           {pending && (

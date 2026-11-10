@@ -13,6 +13,8 @@ export type TaskDetail = {
   due: string | null; dueText: string | null; dueFlag: "late" | "risk" | null;
   assignee: { kind: "agent" | "member" | null; id: string | null; name: string | null; emoji: string | null; online: boolean };
   brief: string; messages: Message[]; me: string;
+  /** Semua file di task ini (hasil kerja + lampiran), terbaru dulu, untuk rak "Hasil kerja". */
+  artifacts: { id: string; name: string; url: string; image: boolean; from: string; when: string; inChat: boolean }[];
   live: { state: "running" | "queued" | "waiting" | "idle"; label: string };
 };
 
@@ -45,10 +47,16 @@ export async function buildDetail(id: string, wsPick?: string | null): Promise<T
       id: c.id, who: nameOf(c.author_type, c.author_id), whoKind: c.author_type === "agent" ? "agent" : c.author_type === "member" ? "member" : "system",
       emoji: emojiOf(c.author_type, c.author_id), when: when(c.created_at), text: c.content, ...files(c.attachments ?? []),
     }));
-  // Lampiran yang tidak menempel di komentar mana pun ditampilkan sebagai pesan terpisah.
-  const inComments = new Set(comments.flatMap(c => (c.attachments ?? []).map(a => a.id)));
-  const loose = attachments.filter(a => !inComments.has(a.id));
-  if (loose.length) messages.push({ id: "lampiran", who: "Lampiran", whoKind: "system", emoji: "📎", when: "", text: "", ...files(loose) });
+  // Rak "Hasil kerja": semua file, baik yang dikirim di pesan maupun yang ditempel langsung ke task.
+  type Art = TaskDetail["artifacts"][number] & { t: number };
+  const arts = new Map<string, Art>();
+  for (const c of comments.filter(c => !c.deleted_at)) for (const a of c.attachments ?? [])
+    arts.set(a.id, { ...proxied(a), image: isImage(a), from: nameOf(c.author_type, c.author_id), when: when(c.created_at), inChat: true, t: Date.parse(c.created_at) });
+  for (const a of attachments) if (!arts.has(a.id)) {
+    const at = a.created_at ?? issue.updated_at;
+    arts.set(a.id, { ...proxied(a), image: isImage(a), from: a.uploader_type && a.uploader_id ? nameOf(a.uploader_type, a.uploader_id) : "Lampiran task", when: when(at), inChat: false, t: Date.parse(at) });
+  }
+  const artifacts = [...arts.values()].sort((a, b) => b.t - a.t).map(({ t: _t, ...rest }) => rest);
 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date());
   let dueFlag: TaskDetail["dueFlag"] = null, dueText: string | null = null;
@@ -91,6 +99,6 @@ export async function buildDetail(id: string, wsPick?: string | null): Promise<T
     url: `${process.env.MULTICA_APP_URL || "https://multica.ai"}/${snap.workspace.slug}/issues/${issue.identifier}`,
     status: issue.status, situation, mode, due: issue.due_date, dueText, dueFlag,
     assignee: { kind: issue.assignee_type, id: issue.assignee_id, name: agent?.name ?? member?.name ?? null, emoji: emoji(agent?.avatar_url), online: runtime?.status === "online" },
-    brief: issue.description ?? "", messages, me: me.name,
+    brief: issue.description ?? "", messages, me: me.name, artifacts,
   };
 }

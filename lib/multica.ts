@@ -75,7 +75,7 @@ export async function workspace(pick?: string | null): Promise<Workspace> {
   return wss.find(w => w.id === pick || w.slug === pick) ?? wss.find(w => w.id === process.env.MULTICA_WORKSPACE_ID) ?? wss[0];
 }
 
-export type Attachment = { id: string; filename: string; url: string; download_url: string; content_type?: string };
+export type Attachment = { id: string; filename: string; url: string; download_url: string; content_type?: string; created_at?: string; uploader_type?: string; uploader_id?: string };
 export type Comment = {
   id: string; author_type: "agent" | "member" | string; author_id: string; content: string; type: string;
   parent_id: string | null; created_at: string; attachments?: Attachment[]; deleted_at?: string;

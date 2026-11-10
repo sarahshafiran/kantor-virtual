@@ -323,3 +323,21 @@ a.btn{text-decoration:none;display:inline-block}
 .rt.brk small{color:var(--brk);font-weight:600}
 .bubble.break{--b:var(--brk-soft);--bl:var(--brk);background:var(--b);border-color:var(--bl)}
 .st-break .status-dot{background:var(--brk)}
+/* rak hasil kerja (ala panel artifact Claude) */
+.shelf{border:1px solid var(--accent);border-radius:12px;background:var(--panel);overflow:hidden}
+.shelf-head{width:100%;display:flex;justify-content:space-between;align-items:center;border:0;background:var(--accent-soft);padding:10px 14px;font-weight:700;font-size:14px;text-align:left}
+.shelf-head small{font-weight:400;color:var(--muted)}
+.tiles{display:flex;gap:8px;overflow-x:auto;padding:10px 12px}
+.tile{flex:0 0 120px;display:flex;flex-direction:column;gap:4px;align-items:stretch;text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--sunk);padding:6px;cursor:pointer}
+.tile[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.tile img{width:100%;height:72px;object-fit:cover;border-radius:6px;background:var(--panel)}
+.tile-icon{height:72px;display:grid;place-items:center;font-size:30px;background:var(--panel);border-radius:6px}
+.tile-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile small{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shelf .pv{margin:0 12px 12px}
+.minifiles{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;align-items:center}
+.mini-img{border:1px solid var(--line);border-radius:8px;padding:0;background:var(--panel);cursor:pointer;overflow:hidden}
+.mini-img img{display:block;width:72px;height:72px;object-fit:cover}
+.dbody > *{flex-shrink:0}
+.shelf .pv-img{max-height:320px;width:auto;object-fit:contain}
+.shelf .pv-frame{max-height:360px}
