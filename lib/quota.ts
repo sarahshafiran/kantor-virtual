@@ -52,9 +52,15 @@ export function quotaStates(s: Snapshot): QuotaState[] {
     const last = runs.find(r => r.status === "completed" || r.status === "failed");
     if (last?.status === "failed" && isQuotaError(last.error)) {
       const reset = quotaResetAt(last.error!, new Date(last.completed_at ?? last.created_at), process.env.KANTOR_TIMEZONE || "Asia/Jakarta");
+      // Sudah lewat 15 menit dari jam reset: anggap kuota pulih (mesin itu mungkin tidak dipakai lagi sejak worker dipindah).
+      if (reset && Date.now() > reset.getTime() + 15 * 60000) continue;
       out.push({ runtimeId: rt.id, provider: rt.provider, resetAt: reset?.toISOString() ?? null, since: last.created_at });
     }
   }
+  // Simulasi untuk uji (hanya dipakai `npm run penjaga:uji -- --kuota=claude`, tidak mengubah apa pun).
+  const sim = process.env.KANTOR_UJI_KUOTA;
+  if (sim) for (const rt of s.runtimes.filter(r => r.provider === sim && !out.some(o => o.runtimeId === r.id)))
+    out.push({ runtimeId: rt.id, provider: rt.provider, resetAt: new Date(Date.now() + 3600000).toISOString(), since: new Date().toISOString() });
   return out;
 }
 

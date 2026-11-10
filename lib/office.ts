@@ -170,7 +170,7 @@ export function buildOffice(s: Snapshot): Office {
     }
     return {
       agentId: a.id, name: a.name, emoji: emojiOf(a), avatar: imgOf(a), description: a.description || "",
-      runtime: rt ? `${rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "GPT (Codex)" : rt.provider}${a.model ? " · " + a.model : ""}` : "Tanpa runtime",
+      runtime: rt ? `${rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "GPT (Codex)" : rt.provider}${a.model ? " · " + a.model : ""}${s.moved?.[a.id]?.to === a.runtime_id ? " · sementara 🔁" : ""}` : "Tanpa runtime",
       state, bubble,
     };
   };

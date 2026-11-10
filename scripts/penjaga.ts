@@ -2,6 +2,9 @@
 import { runWatchdog } from "../lib/watchdog";
 
 const dryRun = process.argv.includes("--uji");
+// --kuota=claude: pura-pura kuota Claude habis (hanya bersama --uji).
+const sim = process.argv.find(a => a.startsWith("--kuota="));
+if (dryRun && sim) process.env.KANTOR_UJI_KUOTA = sim.split("=")[1];
 if (!process.env.MULTICA_TOKEN && process.env.GITHUB_ACTIONS) {
   console.log("MULTICA_TOKEN belum diisi di GitHub Secrets. Penjaga dilewati.");
   process.exit(0);

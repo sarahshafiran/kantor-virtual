@@ -6,8 +6,10 @@ import { join } from "node:path";
 
 export type Agent = {
   id: string; name: string; description: string; avatar_url: string | null;
-  runtime_id: string; status: string; model: string; archived_at: string | null;
+  runtime_id: string; status: string; model: string; archived_at: string | null; thinking_level?: string | null;
 };
+/** Worker yang sementara dipindah ke mesin AI lain karena kuota mesin aslinya habis. */
+export type Moved = Record<string, { from: string; to: string; at: string; resetAt: string | null; model: string; thinking: string }>;
 export type Project = { id: string; title: string; icon: string | null; status: string; due_date: string | null; issue_count: number; done_count: number };
 export type Runtime = { id: string; name: string; provider: string; status: string; last_seen_at: string; owner_id: string };
 export type Issue = {
@@ -176,11 +178,13 @@ export async function loadWorkspace(wsPick?: string | null) {
   const runs = (await Promise.all(
     dir.agents.map(a => get<unknown>(`/api/agents/${a.id}/tasks?limit=20`, id).then(d => list<Run>(d, "tasks")).catch(() => [] as Run[]))
   )).flat();
-  const [kantor, seen] = await Promise.all([
-    kantorSettings(id).catch(() => ({} as KantorSettings)),
+  const [settings, seen] = await Promise.all([
+    get<WorkspaceFull>(`/api/workspaces/${id}`, id).then(f => (f.settings ?? {}) as Record<string, unknown>).catch(() => ({} as Record<string, unknown>)),
     presence(id).catch(() => ({} as Record<string, string>)),
   ]);
-  return { ...dir, workspace: ws, issues, runs, kantor, seen };
+  const kantor = (settings.kantor ?? {}) as KantorSettings;
+  const moved = (((settings.kantor_watch ?? {}) as { moved?: Moved }).moved ?? {}) as Moved;
+  return { ...dir, workspace: ws, issues, runs, kantor, seen, moved };
 }
 export type Snapshot = Awaited<ReturnType<typeof loadWorkspace>>;
 
@@ -212,6 +216,10 @@ export async function autopilots(wsPick?: string | null) {
 export async function setAutopilotStatus(wsPick: string | null | undefined, id: string, status: "active" | "paused") {
   const ws = await workspace(wsPick);
   return call("PATCH", `/api/autopilots/${id}`, ws.id, { status });
+}
+/** Ubah sebagian pengaturan worker (mis. pindah mesin AI). Field lain tidak disentuh. */
+export async function updateAgent(workspaceId: string, agentId: string, patch: Record<string, unknown>) {
+  return call("PUT", `/api/agents/${agentId}`, workspaceId, patch);
 }
 export async function rerunIssue(wsPick: string | null | undefined, issueId: string) {
   const ws = await workspace(wsPick);

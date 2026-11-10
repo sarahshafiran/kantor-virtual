@@ -4,12 +4,12 @@
 //    tugas untuk manusia, login AI kedaluwarsa, dan ringkasan pagi (telat & berisiko).
 // Catatan "sudah dikirim / sudah diulang" disimpan di pengaturan workspace supaya tidak dobel.
 import "server-only";
-import { workspaces, loadWorkspace, rerunIssue, call_ as call, type Run, type Snapshot } from "./multica";
+import { workspaces, loadWorkspace, rerunIssue, updateAgent, call_ as call, type Run, type Snapshot, type Moved } from "./multica";
 import { isQuotaError, isLoginError, quotaResetAt, fmtTime, quotaStates } from "./quota";
 import { friendlyTitle } from "./titles";
 import { telegram, telegramReady } from "./telegram";
 
-type Memory = { sent?: Record<string, string>; retried?: Record<string, string>; started?: string };
+type Memory = { sent?: Record<string, string>; retried?: Record<string, string>; started?: string; moved?: Moved };
 const ACTIVE = new Set(["queued", "dispatched", "running", "in_progress", "preparing", "started"]);
 const tz = () => process.env.KANTOR_TIMEZONE || "Asia/Jakarta";
 const provName = (p: string) => (p === "claude" ? "Claude" : p === "codex" ? "ChatGPT (Codex)" : p);
@@ -24,7 +24,7 @@ async function writeMemory(wsId: string, mem: Memory) {
   const cutoff = Date.now() - 7 * 86400000;
   const prune = (o: Record<string, string> = {}) => Object.fromEntries(Object.entries(o).filter(([, v]) => Date.parse(v) > cutoff));
   const { settings } = await readMemory(wsId);
-  settings.kantor_watch = { sent: prune(mem.sent), retried: prune(mem.retried), started: mem.started };
+  settings.kantor_watch = { sent: prune(mem.sent), retried: prune(mem.retried), started: mem.started, moved: mem.moved ?? {} };
   await call("PATCH", `/api/workspaces/${wsId}`, wsId, { settings });
 }
 
@@ -53,11 +53,52 @@ export async function runWatchdog(opts: { notify?: boolean; dryRun?: boolean } =
     const latest = new Map<string, Run>();
     for (const r of s.runs) if (r.issue_id && (!latest.has(r.issue_id) || Date.parse(r.created_at) > Date.parse(latest.get(r.issue_id)!.created_at))) latest.set(r.issue_id, r);
 
-    // 1) Kuota habis → beri tahu jam reset; setelah reset → jalankan ulang otomatis.
-    for (const q of quotaStates(s)) {
-      const when = q.resetAt ? fmtTime(new Date(q.resetAt)) : null;
-      await once(`quota:${q.runtimeId}:${q.since.slice(0, 13)}`,
-        `☕ **Kuota ${provName(q.provider)} habis** (${w.name}).${when ? ` Reset sekitar pukul **${when}**.` : ""} Task yang terhenti akan dilanjutkan otomatis setelah kuota pulih.`);
+    // 1) Kuota habis → pindahkan worker ke mesin AI lain yang masih punya kuota (mis. Claude → GPT),
+    //    lalu kembalikan setelah kuota mesin aslinya pulih. Kalau tidak ada mesin cadangan: tunggu reset.
+    mem.moved ??= {};
+    const quotas = quotaStates(s);
+    const outNow = new Set(quotas.filter(q => !q.resetAt || Date.parse(q.resetAt) > now).map(q => q.runtimeId));
+    const agentById = new Map(s.agents.map(a => [a.id, a]));
+    const busy = (agentId: string) => s.runs.some(x => x.agent_id === agentId && ACTIVE.has(x.status));
+    const switched: string[] = [];
+    for (const q of quotas) {
+      if (!outNow.has(q.runtimeId)) continue;
+      const spare = s.runtimes.find(r => r.id !== q.runtimeId && r.provider !== q.provider && r.status === "online" && !outNow.has(r.id));
+      const movers = s.agents.filter(a => a.runtime_id === q.runtimeId && !a.archived_at && !mem.moved![a.id]);
+      if (spare && movers.length) {
+        for (const a of movers) {
+          if (dry) { report.push(`[uji] pindahkan ${a.name}: ${provName(q.provider)} → ${provName(spare.provider)}`); continue; }
+          // Model & tingkat berpikir khusus mesin lama dikosongkan dulu, dan dikembalikan saat pulang.
+          await updateAgent(w.id, a.id, { runtime_id: spare.id, model: "", thinking_level: "" });
+          mem.moved![a.id] = { from: q.runtimeId, to: spare.id, at: new Date().toISOString(), resetAt: q.resetAt, model: a.model ?? "", thinking: a.thinking_level ?? "" };
+          a.runtime_id = spare.id; switched.push(a.name);
+        }
+        if (switched.length) {
+          const when = q.resetAt ? fmtTime(new Date(q.resetAt)) : null;
+          await once(`switch:${q.runtimeId}:${q.since.slice(0, 13)}`,
+            `🔁 **Kuota ${provName(q.provider)} habis** (${w.name}). ${switched.length} worker sementara pindah ke **${provName(spare.provider)}** dan task yang terhenti dilanjutkan sekarang.${when ? ` Mereka kembali ke ${provName(q.provider)} setelah kuota reset sekitar pukul **${when}**.` : ""}`);
+          report.push(`pindah ke ${spare.provider}: ${switched.join(", ")}`);
+        }
+      } else if (!spare) {
+        const when = q.resetAt ? fmtTime(new Date(q.resetAt)) : null;
+        await once(`quota:${q.runtimeId}:${q.since.slice(0, 13)}`,
+          `☕ **Kuota ${provName(q.provider)} habis** (${w.name}).${when ? ` Reset sekitar pukul **${when}**.` : ""} Task yang terhenti akan dilanjutkan otomatis setelah kuota pulih.`);
+      }
+    }
+    // Pulang ke mesin asli: kuotanya sudah pulih dan worker sedang tidak di tengah pekerjaan.
+    const back: string[] = [];
+    for (const [agentId, m] of Object.entries(mem.moved)) {
+      const a = agentById.get(agentId);
+      if (!a || a.archived_at || a.runtime_id !== m.to) { if (!dry) delete mem.moved[agentId]; continue; } // diubah manual: tidak ikut campur lagi
+      const resetPassed = m.resetAt ? now > Date.parse(m.resetAt) + 2 * 60000 : now > Date.parse(m.at) + 3 * 3600000;
+      if (!resetPassed || outNow.has(m.from) || busy(agentId)) continue;
+      if (dry) { report.push(`[uji] kembalikan ${a.name} ke mesin asli`); continue; }
+      await updateAgent(w.id, agentId, { runtime_id: m.from, model: m.model, thinking_level: m.thinking });
+      a.runtime_id = m.from; delete mem.moved[agentId]; back.push(a.name);
+    }
+    if (back.length) {
+      await once(`back:${now - (now % 3600000)}`, `✅ Kuota pulih (${w.name}). ${back.join(", ")} kembali memakai mesin AI aslinya.`);
+      report.push(`kembali: ${back.join(", ")}`);
     }
     for (const [issueId, r] of latest) {
       const issue = issueById.get(issueId);
@@ -65,14 +106,17 @@ export async function runWatchdog(opts: { notify?: boolean; dryRun?: boolean } =
       if (["done", "cancelled", "in_review", "backlog"].includes(issue.status)) continue;
       const reset = quotaResetAt(r.error!, new Date(r.completed_at ?? r.created_at), tz());
       const readyAt = reset ? reset.getTime() + 2 * 60000 : Date.parse(r.created_at) + 60 * 60000; // tanpa jam: coba lagi setelah 1 jam
-      const rt = rtById.get(r.runtime_id);
-      if (now < readyAt || !open || rt?.status !== "online") continue;
+      // Worker sudah dipindah ke mesin lain → tidak perlu menunggu reset.
+      const owner = issue.assignee_type === "agent" ? agentById.get(issue.assignee_id ?? "") : undefined;
+      const movedAway = !!owner && owner.runtime_id !== r.runtime_id && !outNow.has(owner.runtime_id);
+      const rt = rtById.get(movedAway ? owner!.runtime_id : r.runtime_id);
+      if ((!movedAway && now < readyAt) || !open || rt?.status !== "online") continue;
       if (s.runs.some(x => x.issue_id === issueId && ACTIVE.has(x.status))) continue;
       if (dry) { report.push(`[uji] akan mengulang: ${friendlyTitle(issue)}`); continue; }
       await rerunIssue(w.id, issueId).catch(() => {});
       mem.retried![r.id] = new Date().toISOString();
       report.push(`ulang: ${friendlyTitle(issue)}`);
-      await once(`resume:${r.id}`, `▶️ Kuota ${provName(rt?.provider ?? "")} sudah pulih. Melanjutkan: **${friendlyTitle(issue)}**.`);
+      if (!movedAway) await once(`resume:${r.id}`, `▶️ Kuota ${provName(rt?.provider ?? "")} sudah pulih. Melanjutkan: **${friendlyTitle(issue)}**.`);
     }
 
     // 2) Login AI kedaluwarsa di laptop.
