@@ -16,7 +16,7 @@ function subscribe(fn: (t: number) => void) {
 
 const HAIR = ["#2a1a14", "#1c1c22", "#4a2e1f", "#8a3b1c", "#9a9a96", "#5b3a29", "#c9a26b"];
 const SKIN = ["#f0c8a4", "#e8b894", "#d9a07a", "#c98e66", "#a8714a"];
-const SHIRT = ["#7F77DD", "#D85A30", "#1D9E75", "#EF9F27", "#D4537E", "#378ADD", "#639922", "#993556"];
+const SHIRT = ["#FF69B4", "#FFEA00", "#00D9C0", "#FF6B35", "#A259FF", "#FF8FC8", "#3FE6D2", "#C18CFF"];
 function hash(s: string) { let h = 7; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; }
 export function lookOf(name: string) {
   const h = hash(name);
@@ -37,7 +37,7 @@ export default function PixelDesk({ name, state, human, papers = 0 }: { name: st
     const draw = (t: number) => {
       c.clearRect(0, 0, W, H);
       // kursi
-      r(22, 8, 13, 10, "#5f5e5a"); r(23, 9, 11, 8, "#7a7873");
+      r(22, 8, 13, 10, "#2B1030"); r(23, 9, 11, 8, "#A259FF");
       // tokoh
       if (seated) {
         const y = 7 + (state === "working" && Math.floor(t / 4) % 2 ? 1 : 0), x = 24;
@@ -46,24 +46,24 @@ export default function PixelDesk({ name, state, human, papers = 0 }: { name: st
         r(x + 1, y + 5, 7, 5, look.shirt); r(x, y + 6, 1, 4, look.skin); r(x + 8, y + 6, 1, 4, look.skin);
       }
       // meja
-      r(3, 18, 42, 4, "#c08a55"); r(3, 22, 42, 7, "#9a6538"); r(5, 29, 3, 4, "#7a4d2a"); r(40, 29, 3, 4, "#7a4d2a");
+      r(2, 17, 44, 13, "#2B1030"); r(3, 18, 42, 4, "#FFD1E6"); r(3, 22, 42, 7, "#FF69B4"); r(6, 24, 6, 1, "#FFF1F5"); r(5, 30, 3, 3, "#2B1030"); r(40, 30, 3, 3, "#2B1030");
       if (!human) {
         // layar
-        r(7, 8, 13, 10, "#2c2c2a");
+        r(7, 8, 13, 10, "#2B1030");
         const blink = Math.floor(t / 6) % 2;
-        const screen = state === "working" ? (Math.floor(t / 3) % 2 ? "#85B7EB" : "#B5D4F4")
+        const screen = state === "working" ? (Math.floor(t / 3) % 2 ? "#00D9C0" : "#7FF2E3")
           : state === "failed" ? (blink ? "#E24B4A" : "#791F1F")
-          : state === "away" ? "#444441" : "#9fb3c8";
-        r(8, 9, 11, 7, screen); r(12, 17, 3, 1, "#2c2c2a");
-        if (state === "working") for (let i = 0; i < 3; i++) r(9 + i * 3, 10 + ((t + i) % 4), 2, 1, "#185FA5");
+          : state === "away" ? "#4A3A50" : "#C9B8FF";
+        r(8, 9, 11, 7, screen); r(12, 17, 3, 1, "#2B1030");
+        if (state === "working") for (let i = 0; i < 3; i++) r(9 + i * 3, 10 + ((t + i) % 4), 2, 1, "#2B1030");
       } else {
         // laptop & lampu meja
-        r(8, 14, 12, 4, "#d3d1c7"); r(9, 15, 10, 2, seated ? "#B5D4F4" : "#888780");
-        r(41, 10, 1, 8, "#5f5e5a"); r(38, 8, 7, 3, seated ? "#FAC775" : "#888780");
+        r(8, 14, 12, 4, "#2B1030"); r(9, 15, 10, 2, seated ? "#00D9C0" : "#6E5A73");
+        r(41, 10, 1, 8, "#2B1030"); r(38, 8, 7, 3, seated ? "#FFEA00" : "#9A8AA0");
       }
-      if (state === "break") { r(36, 15, 4, 3, "#ffffff"); r(40, 16, 1, 1, "#ffffff"); r(37, 12 - (t % 3), 1, 1, "#d3d1c7"); r(38, 13 - ((t + 1) % 3), 1, 1, "#d3d1c7"); }
-      if (state === "review") { r(36, 15, 6, 3, "#ffffff"); r(37, 14, 6, 1, "#f1efe8"); }
-      for (let i = 0; i < Math.min(papers, 4); i++) { r(24 + i, 16 - i, 7, 2, "#ffffff"); r(30 + i, 16 - i, 1, 1, "#E24B4A"); }
+      if (state === "break") { r(36, 15, 4, 3, "#FF6B35"); r(40, 16, 1, 1, "#FF6B35"); r(37, 12 - (t % 3), 1, 1, "#d3d1c7"); r(38, 13 - ((t + 1) % 3), 1, 1, "#d3d1c7"); }
+      if (state === "review") { r(36, 15, 6, 3, "#FFEA00"); r(37, 14, 6, 1, "#FFF9C2"); }
+      for (let i = 0; i < Math.min(papers, 4); i++) { r(24 + i, 16 - i, 7, 2, "#ffffff"); r(30 + i, 16 - i, 1, 1, "#FF69B4"); }
       X.clearRect(0, 0, cv.width, cv.height); X.imageSmoothingEnabled = false; X.drawImage(lo, 0, 0, W * S, H * S);
     };
     draw(tick);

@@ -48,7 +48,7 @@ function drawWalker(cv: HTMLCanvasElement, name: string, frame: number, carry: b
   r(2, 2, 5, 3, L.skin); r(3, 3, 1, 1, "#2b2420"); r(6, 3, 1, 1, "#2b2420");
   r(1, 5, 7, 5, L.shirt); r(0, 6, 1, 3, L.skin); r(8, 6, 1, 3, L.skin);
   const a = frame % 2; r(2, 10, 2, a ? 2 : 3, "#3d3a4a"); r(5, 10, 2, a ? 3 : 2, "#3d3a4a");
-  if (carry) { r(8, 5, 4, 5, "#ffffff"); r(9, 6, 2, 1, "#b4b2a9"); r(9, 8, 2, 1, "#b4b2a9"); }
+  if (carry) { r(8, 5, 4, 5, "#ffffff"); r(9, 6, 2, 1, "#FF69B4"); r(9, 8, 2, 1, "#A259FF"); }
 }
 
 type Pt = [number, number];

@@ -1,30 +1,32 @@
 
 /* Layout: denah kantor dari atas (ruangan per project) di kiri, panel "Perlu Perhatianku" tetap di kanan, laci detail worker meluncur dari kanan. */
 :root{
-  --floor:#EDEFEA; --floor-line:#E2E5DE; --room:#F8F8F4; --wall:#2E3B38; --desk:#D9CBB3; --desk-edge:#BFAE92;
-  --ink:#1F2A27; --muted:#66716D; --line:#D5D9D2; --panel:#FFFFFF; --sunk:#F2F3EF;
-  --accent:#2F6B5A; --accent-ink:#FFFFFF; --accent-soft:#DCEBE5;
-  --attn:#C98A00; --attn-soft:#FBEFCF; --ok:#2E8B57; --ok-soft:#DDF0E4; --wait:#B4561F; --wait-soft:#F8E3D6; --off:#7C8590;
-  --todo:#3F63B5; --todo-soft:#E0E8F8; --brk:#8A5A3C; --brk-soft:#F1E6DC;
-  --shadow:0 1px 2px rgba(30,40,35,.08),0 6px 18px rgba(30,40,35,.08);
-  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
-  --f-body:"Figtree",ui-sans-serif,system-ui,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  /* Palet ceria: #FF69B4 pink · #FFEA00 kuning · #00D9C0 tosca · #FF6B35 oranye · #A259FF ungu · #FFF1F5 pink muda */
+  --pink:#FF69B4; --yellow:#FFEA00; --teal:#00D9C0; --orange:#FF6B35; --purple:#A259FF; --blush:#FFF1F5;
+  --floor:#FFF1F5; --floor-line:#FFE0EC; --room:#FFFFFF; --wall:#2B1030; --desk:#FFD1E6; --desk-edge:#FF69B4;
+  --ink:#2B1030; --muted:#6E5A73; --line:#F3C6DA; --panel:#FFFFFF; --sunk:#FFF1F5;
+  --accent:#FF69B4; --accent-ink:#2B1030; --accent-soft:#FFD9EC;
+  --attn:#FFEA00; --attn-soft:#FFF9C2; --ok:#00C2AB; --ok-soft:#D2FAF4; --wait:#FF6B35; --wait-soft:#FFE4D9; --off:#9A8AA0;
+  --todo:#A259FF; --todo-soft:#EFE3FF; --brk:#FF6B35; --brk-soft:#FFE4D9;
+  --shadow:3px 3px 0 #2B1030;
+  --f-display:"Pixelify Sans",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Nunito",ui-sans-serif,system-ui,sans-serif;
+  --f-mono:"Pixelify Sans",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --floor:#171C1B; --floor-line:#1E2423; --room:#1F2625; --wall:#8FA59E; --desk:#4A4236; --desk-edge:#5E5444;
-  --ink:#E7ECE9; --muted:#9AA6A1; --line:#323B39; --panel:#1C2221; --sunk:#252D2B;
-  --accent:#6FC2A6; --accent-ink:#0F1A17; --accent-soft:#21362F;
-  --attn:#F0B531; --attn-soft:#3A3018; --ok:#5CC48A; --ok-soft:#1D3527; --wait:#EE8A52; --wait-soft:#3B261A; --off:#7E8893;
-  --todo:#8AA8F0; --todo-soft:#1E2840; --brk:#D2A07E; --brk-soft:#35281F;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.3); color-scheme:dark}}
+  --floor:#1E1024; --floor-line:#2A1733; --room:#261530; --wall:#FFB3D9; --desk:#4A2A55; --desk-edge:#FF69B4;
+  --ink:#FFF1F5; --muted:#C9B3D1; --line:#4A2E55; --panel:#2A1734; --sunk:#341E40;
+  --accent:#FF69B4; --accent-ink:#2B1030; --accent-soft:#4D2045;
+  --attn:#FFEA00; --attn-soft:#4A4416; --ok:#00D9C0; --ok-soft:#123F3A; --wait:#FF8A5C; --wait-soft:#4A2618; --off:#9A8AA0;
+  --todo:#C18CFF; --todo-soft:#33204F; --brk:#FF8A5C; --brk-soft:#4A2618;
+  --shadow:3px 3px 0 #000; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --floor:#171C1B; --floor-line:#1E2423; --room:#1F2625; --wall:#8FA59E; --desk:#4A4236; --desk-edge:#5E5444;
-  --ink:#E7ECE9; --muted:#9AA6A1; --line:#323B39; --panel:#1C2221; --sunk:#252D2B;
-  --accent:#6FC2A6; --accent-ink:#0F1A17; --accent-soft:#21362F;
-  --attn:#F0B531; --attn-soft:#3A3018; --ok:#5CC48A; --ok-soft:#1D3527; --wait:#EE8A52; --wait-soft:#3B261A; --off:#7E8893;
-  --todo:#8AA8F0; --todo-soft:#1E2840; --brk:#D2A07E; --brk-soft:#35281F;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.3); color-scheme:dark}
+  --floor:#1E1024; --floor-line:#2A1733; --room:#261530; --wall:#FFB3D9; --desk:#4A2A55; --desk-edge:#FF69B4;
+  --ink:#FFF1F5; --muted:#C9B3D1; --line:#4A2E55; --panel:#2A1734; --sunk:#341E40;
+  --accent:#FF69B4; --accent-ink:#2B1030; --accent-soft:#4D2045;
+  --attn:#FFEA00; --attn-soft:#4A4416; --ok:#00D9C0; --ok-soft:#123F3A; --wait:#FF8A5C; --wait-soft:#4A2618; --off:#9A8AA0;
+  --todo:#C18CFF; --todo-soft:#33204F; --brk:#FF8A5C; --brk-soft:#4A2618;
+  --shadow:3px 3px 0 #000; color-scheme:dark}
 
 *{box-sizing:border-box}
 body{background:var(--floor);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
@@ -358,20 +360,22 @@ a.btn{text-decoration:none;display:inline-block}
 .tile{position:relative}
 .tile-new{position:absolute;top:10px;left:10px}
 
-/* Kantor piksel: lantai ubin, dinding berjendela, meja bergambar piksel. */
-.room{border:6px solid #8a7558;border-radius:4px;padding:40px 20px 24px;
-  background:linear-gradient(#d8c7ab 0 22px,#b9a585 22px 26px,transparent 26px),
-    repeating-linear-gradient(90deg,transparent 0 60px,#9fc6e0 60px 96px,transparent 96px 200px) 0 4px/100% 14px no-repeat,
-    repeating-conic-gradient(#efe6d6 0 25%,#e8ddca 0 50%) 0 26px/48px 48px;background-color:#efe6d6}
-.room::after{background:#efe6d6}
-.room.team{background:linear-gradient(#d8c7ab 0 22px,#b9a585 22px 26px,transparent 26px),
-    repeating-conic-gradient(#f3dcd2 0 25%,#ecd0c4 0 50%) 0 26px/48px 48px;background-color:#f3dcd2}
-.room.team::after{background:#f3dcd2}
-.roomhead h2,.roomhead .sub{color:#2c2c2a}
-.roomhead .sub{color:#5f5e5a}
+/* Kantor piksel: tiap ruangan punya warna dinding sendiri, lantai ubin ceria. */
+.office > section.room:nth-of-type(4n+1){--rc:#00D9C0;--rt:#EEFDFB}
+.office > section.room:nth-of-type(4n+2){--rc:#A259FF;--rt:#F7F1FF}
+.office > section.room:nth-of-type(4n+3){--rc:#FF6B35;--rt:#FFF3EE}
+.office > section.room:nth-of-type(4n){--rc:#FFEA00;--rt:#FFFDE6}
+.office > section.room.team{--rc:#FF69B4;--rt:#FFF1F5}
+.room{border:3px solid #2B1030;border-radius:6px;padding:40px 20px 24px;box-shadow:5px 5px 0 #2B1030;
+  background:linear-gradient(var(--rc) 0 22px,#2B1030 22px 25px,transparent 25px),
+    repeating-linear-gradient(90deg,transparent 0 40px,rgba(255,255,255,.55) 40px 64px,transparent 64px 120px) 0 5px/100% 12px no-repeat,
+    repeating-conic-gradient(#FFFFFF 0 25%,var(--rt) 0 50%) 0 25px/40px 40px;background-color:#fff}
+.room::after{display:none}
+.roomhead h2{color:#2B1030}
+.roomhead .sub{color:#6E5A73}
 .desk.pix{padding:44px 4px 4px}
-.desk.pix .who{color:#2c2c2a}
-.desk.pix .model{color:#5f5e5a}
+.desk.pix .who{color:#2B1030;font-family:var(--f-display);font-weight:600}
+.desk.pix .model{color:#6E5A73}
 .desk.pix.dim{opacity:.62}
 .desk.pix.dim .pixdesk{filter:grayscale(.5) brightness(.9)}
 .pixbox{position:relative;display:block}
@@ -382,10 +386,10 @@ a.btn{text-decoration:none;display:inline-block}
 .flag.todo{background:var(--todo);color:#fff}
 .bubble.here{--b:var(--ok-soft);--bl:var(--ok);background:var(--b);border-color:var(--bl)}
 .deskwrap{position:relative;display:flex;justify-content:center}
-.chatbtn{position:absolute;top:50px;left:calc(50% + 46px);width:32px;height:32px;border-radius:50%;border:2px solid #8a7558;background:#fff;font-size:15px;display:grid;place-items:center;box-shadow:var(--shadow);transition:transform .15s}
+.chatbtn{position:absolute;top:50px;left:calc(50% + 46px);width:32px;height:32px;border-radius:50%;border:2px solid #2B1030;background:#FFEA00;font-size:15px;display:grid;place-items:center;box-shadow:var(--shadow);transition:transform .15s}
 .chatbtn:hover{transform:scale(1.1)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .room{filter:brightness(.82)}}
-:root[data-theme="dark"] .room{filter:brightness(.82)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .room{filter:brightness(.88)}}
+:root[data-theme="dark"] .room{filter:brightness(.88)}
 
 /* Serah terima: worker berjalan di atas denah kantor. */
 .office{position:relative}
@@ -393,4 +397,36 @@ a.btn{text-decoration:none;display:inline-block}
 .walker{position:absolute;left:0;top:0;width:36px;height:39px;will-change:transform}
 .walker canvas{display:block;width:36px;height:39px;image-rendering:pixelated}
 .walktag{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:4px;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  background:#fff;color:#2c2c2a;border:1px solid #8a7558;border-radius:8px;padding:2px 8px;font-size:11.5px;box-shadow:var(--shadow)}
+  background:#FFEA00;color:#2B1030;border:2px solid #2B1030;border-radius:8px;padding:2px 8px;font-size:11.5px;box-shadow:var(--shadow)}
+
+/* Gaya komik: garis tegas, bayangan keras, huruf piksel untuk judul dan label. */
+header.top{border-bottom:3px solid var(--ink)}
+.brand h1{font-size:26px;color:var(--ink);text-shadow:2px 2px 0 var(--pink)}
+.btn{border:2px solid var(--ink);border-radius:8px;box-shadow:2px 2px 0 var(--ink);transition:transform .1s,box-shadow .1s}
+.btn:hover{border-color:var(--ink);transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+.btn:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.btn:disabled{box-shadow:none;transform:none;opacity:.55}
+.bld{border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink);background:var(--panel)}
+.bld[aria-current="page"]{background:var(--pink);color:#2B1030;border-color:var(--ink)}
+.bld .count,.count{font-family:var(--f-display)}
+.attn{border:3px solid var(--ink);box-shadow:5px 5px 0 var(--ink)}
+.attn .ah{border-bottom:3px solid var(--ink);background:var(--yellow);color:#2B1030}
+.attn .ah p{color:#2B1030}
+.attn h3{font-family:var(--f-display);letter-spacing:.02em}
+.bubble{border:2px solid var(--ink);--bl:var(--ink);font-family:var(--f-display);font-size:12.5px}
+.bubble.waiting,.bubble.human,.bubble.break,.bubble.failed,.bubble.review,.bubble.here{border-color:var(--ink);--bl:var(--ink)}
+.bubble.review{--b:#FFF9C2} .bubble.here{--b:#D2FAF4} .bubble.human{--b:#EFE3FF} .bubble.break{--b:#FFE4D9}
+.stack,.flag{border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.stack,.flag.rev{background:var(--yellow);color:#2B1030}
+.flag.todo{background:var(--purple);color:#fff}
+.flag.risk{background:var(--orange);color:#fff}
+.flag.late{background:#E8264B;color:#fff}
+.pill,.kind{border:1.5px solid var(--ink);font-family:var(--f-display);font-weight:500;letter-spacing:.02em}
+.drawer{border-left:3px solid var(--ink);box-shadow:-6px 0 0 rgba(43,16,48,.25)}
+.dhead{border-bottom:3px solid var(--ink)}
+.msg{border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.msg.me{background:#FFD9EC}
+.toast{background:var(--purple);color:#fff;border:2px solid var(--ink);font-family:var(--f-display)}
+.rt{border:2px solid var(--ink)}
+.legend{font-family:var(--f-display)}
+.attn .ah .count{background:var(--pink);color:#2B1030;border:2px solid #2B1030}
