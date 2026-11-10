@@ -4,7 +4,8 @@ import { workspaces, loadDirectory } from "../lib/multica";
 import { telegram, botFor } from "../lib/telegram";
 
 (async () => {
-  for (const w of await workspaces()) {
+  const only = process.argv[2]; // opsional: slug satu kantor saja
+  for (const w of (await workspaces()).filter(w => !only || w.slug === only)) {
     const dir = await loadDirectory(w.id);
     const tg = { id: w.id, slug: w.slug, name: w.name, members: dir.members.map(m => m.name) };
     const bot = botFor(tg);

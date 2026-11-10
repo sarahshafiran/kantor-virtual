@@ -49,11 +49,18 @@ export async function telegram(text: string, onlyName?: string | null, office?: 
   const body = office && !bot.own ? `🏢 **${office.name}**\n${text}` : text;
   let sent = 0;
   for (const r of to) {
-    const res = await fetch(`https://api.telegram.org/bot${bot.token}/sendMessage`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: r.chat, text: esc(body).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"), parse_mode: "HTML", disable_web_page_preview: true }),
-    }).catch(() => null);
+    // Sambungan ke Telegram kadang putus-sambung: coba sampai 3 kali.
+    let res: Response | null = null, why = "";
+    for (let i = 0; i < 3 && !res?.ok; i++) {
+      if (i) await new Promise(ok => setTimeout(ok, 2000 * i));
+      res = await fetch(`https://api.telegram.org/bot${bot.token}/sendMessage`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({ chat_id: r.chat, text: esc(body).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"), parse_mode: "HTML", disable_web_page_preview: true }),
+      }).catch((e: unknown) => { why = String((e as { cause?: { code?: string } })?.cause?.code ?? e); return null; });
+      if (res && !res.ok && res.status < 500 && res.status !== 429) break; // ditolak Telegram: tidak perlu diulang
+    }
     if (res?.ok) sent++;
+    else console.warn(`Telegram ke ${r.name || r.chat} gagal: ${res ? ((await res.json().catch(() => ({}))) as { description?: string }).description ?? res.status : `tidak tersambung (${why})`}`);
   }
   return sent;
 }
