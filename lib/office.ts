@@ -20,7 +20,7 @@ export type Office = {
   switchOpen: boolean; parked: number; changedBy: string | null;
   alerts: string[];
   seen: Record<string, string>;
-  runtimes: { name: string; provider: string; online: boolean; lastSeen: string; quotaReset: string | null; quotaOut: boolean }[];
+  runtimes: { id: string; name: string; owner: string | null; provider: string; online: boolean; lastSeen: string; quotaReset: string | null; quotaOut: boolean }[];
   rooms: Room[]; idleDesks: Desk[];
   attention: { overdue: TaskView[]; human: TaskView[]; review: TaskView[]; failed: RunView[] };
   people: string[];
@@ -170,7 +170,7 @@ export function buildOffice(s: Snapshot): Office {
     }
     return {
       agentId: a.id, name: a.name, emoji: emojiOf(a), avatar: imgOf(a), description: a.description || "",
-      runtime: rt ? `${rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "GPT (Codex)" : rt.provider}${a.model ? " · " + a.model : ""}${s.moved?.[a.id]?.to === a.runtime_id ? " · sementara 🔁" : ""}` : "Tanpa runtime",
+      runtime: rt ? `${rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "GPT (Codex)" : rt.provider}${s.runtimes.filter(x => x.provider === rt.provider).length > 1 ? " · " + (s.members.find(m => m.user_id === rt.owner_id || m.id === rt.owner_id)?.name.split(/\s+/)[0] ?? "") : ""}${a.model ? " · " + a.model : ""}${s.moved?.[a.id]?.to === a.runtime_id ? " · sementara 🔁" : ""}` : "Tanpa runtime",
       state, bubble,
     };
   };
@@ -229,9 +229,12 @@ export function buildOffice(s: Snapshot): Office {
     seen: s.seen ?? {},
     runtimes: s.runtimes.map(r => {
       const q = quota.get(r.id);
-      return { name: r.provider === "claude" ? "Claude" : r.provider === "codex" ? "GPT (Codex)" : r.name, provider: r.provider, online: r.status === "online", lastSeen: relTime(r.last_seen_at, tz),
+      // Beberapa laptop bisa punya mesin yang sama (mis. Claude milik Ara dan milik Dan): tampilkan nama pemiliknya.
+      const ownerName = s.members.find(m => m.user_id === r.owner_id || m.id === r.owner_id)?.name.split(/\s+/)[0] ?? null;
+      const shared = s.runtimes.filter(x => x.provider === r.provider).length > 1;
+      return { id: r.id, owner: shared ? ownerName : null, name: r.provider === "claude" ? "Claude" : r.provider === "codex" ? "GPT (Codex)" : r.name, provider: r.provider, online: r.status === "online", lastSeen: relTime(r.last_seen_at, tz),
         quotaOut: !!q, quotaReset: q?.resetAt ? fmtTime(new Date(q.resetAt)) : null };
-    }),
+    }).sort((a, b) => String(a.owner).localeCompare(String(b.owner)) || a.provider.localeCompare(b.provider)),
     rooms, idleDesks,
     attention: {
       // Setiap task hanya muncul di satu bagian, supaya daftar tidak dobel.
