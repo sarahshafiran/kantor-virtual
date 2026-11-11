@@ -10,11 +10,15 @@ type Msg = { id: string; mine: boolean; text: string; when: string; failed: stri
 
 const md = (t: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: (p) => <a {...p} target="_blank" rel="noreferrer" /> }}>{t}</ReactMarkdown>;
 
-/** Hal-hal yang bisa dibantu Mika (manajer kantor), ditampilkan sebagai pengingat di chat. */
+/** Nama agen manajer kantor. Bisa diganti per pemasangan lewat NEXT_PUBLIC_KANTOR_MANAGER. */
+export const MANAGER = process.env.NEXT_PUBLIC_KANTOR_MANAGER?.trim() || "Mika";
+export const isManager = (name: string) => name.trim().toLowerCase() === MANAGER.toLowerCase();
+
+/** Hal-hal yang bisa dibantu manajer kantor, ditampilkan sebagai pengingat di chat. */
 const MIKA_CAN = [
   { icon: "💭", label: "Brainstorm ide", hint: "Lempar ide mentah, kita kembangkan bareng", prompt: "Aku mau brainstorm soal: " },
   { icon: "🗂️", label: "Bikin project baru", hint: "Ruangan baru lengkap dengan rencananya", prompt: "Tolong bantu aku bikin project baru. Tujuannya: " },
-  { icon: "📋", label: "Bikin task baru", hint: "Mika pilihkan worker dan tenggatnya", prompt: "Tolong buatkan task baru: " },
+  { icon: "📋", label: "Bikin task baru", hint: `${MANAGER} pilihkan worker dan tenggatnya`, prompt: "Tolong buatkan task baru: " },
   { icon: "🧑‍💼", label: "Rekrut worker baru", hint: "Bikin agent baru dengan peran tertentu", prompt: "Aku butuh worker baru untuk peran: " },
   { icon: "🎓", label: "Tambah keahlian worker", hint: "Tambah skill atau ubah instruksi worker", prompt: "Tolong tambahkan keahlian ini ke worker: " },
   { icon: "⏰", label: "Bikin pekerjaan rutin", hint: "Task yang jalan sendiri tiap hari/minggu", prompt: "Aku mau ada pekerjaan rutin yang jalan otomatis: " },
@@ -92,7 +96,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
           {!sid && <option value="">Obrolan baru</option>}
         </select>
         <button className="btn sm" onClick={() => { setSid(null); setMsgs([]); }}>+ Obrolan baru</button>
-        {isMika && <button className="btn sm" onClick={() => setShowHelp(h => !h)} aria-expanded={showHelp}>💡 Mika bisa apa?</button>}
+        {isMika && <button className="btn sm" onClick={() => setShowHelp(h => !h)} aria-expanded={showHelp}>💡 {MANAGER} bisa apa?</button>}
       </div>
 
       <div className="dbody" ref={body}>
@@ -137,7 +141,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
           <div className="chiprow proceed">
             <span className="hint">Sudah oke?</span>
             <button className="btn sm" onClick={() => onMakeTask(lastReply)}>📋 Jadikan task untuk {agent.name}</button>
-            {isMika && <button className="btn sm" disabled={!!sending || working} onClick={() => send("Oke, proceed. Tolong pecah hasil diskusi kita jadi task untuk worker yang tepat (lengkap dengan tenggat dan siapa yang perlu review), lalu buat task-nya. Setelah itu sebutkan daftar task yang kamu buat.")}>🧩 Minta Mika pecah jadi task tim</button>}
+            {isMika && <button className="btn sm" disabled={!!sending || working} onClick={() => send("Oke, proceed. Tolong pecah hasil diskusi kita jadi task untuk worker yang tepat (lengkap dengan tenggat dan siapa yang perlu review), lalu buat task-nya. Setelah itu sebutkan daftar task yang kamu buat.")}>🧩 Minta {MANAGER} pecah jadi task tim</button>}
           </div>
         )}
         <textarea id="chat-msg" value={text} onChange={e => setText(e.target.value)} placeholder={`Tulis pesan untuk ${agent.name}…`}

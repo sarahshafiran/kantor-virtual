@@ -7,7 +7,7 @@ import type { Building } from "./page";
 import OfficeSwitch from "./office-switch";
 import ThemeToggle from "./theme-toggle";
 import FilePicker, { uploadAll } from "./file-picker";
-import ChatPanel from "./chat-panel";
+import ChatPanel, { MANAGER, isManager } from "./chat-panel";
 import PixelDesk, { type PixelState } from "./pixel-desk";
 import { HandoverLayer, useHandoverDetector, type Handover } from "./handover";
 
@@ -214,7 +214,7 @@ export default function OfficeView({ office, buildings, attention, people, seen 
   const allTasks: TaskView[] = openDesk ? office.agentsDetail[openDesk.agentId]?.tasks ?? [] : [];
   const closeAll = () => { setOpenTask(null); setOpenDesk(null); setOpenHuman(null); setAdding(false); setChatWith(null); };
   const allDesks = [...office.rooms.flatMap(r => r.desks), ...office.idleDesks];
-  const mika = allDesks.find(d => d.name.toLowerCase() === "mika");
+  const mika = allDesks.find(d => isManager(d.name));
 
   // Tahap 2: worker berjalan mengantar pekerjaan saat ada serah terima.
   const officeRef = useRef<HTMLElement>(null);
@@ -391,15 +391,15 @@ export default function OfficeView({ office, buildings, attention, people, seen 
 
       {chatWith && (
         <ChatPanel ws={office.workspaceId} agent={{ id: chatWith.agentId, name: chatWith.name, emoji: chatWith.emoji, role: chatWith.description }}
-          isMika={chatWith.name.toLowerCase() === "mika"} projectId={null} laptopOn={office.open}
+          isMika={isManager(chatWith.name)} projectId={null} laptopOn={office.open}
           onClose={() => setChatWith(null)}
           onMakeTask={detail => { const d = chatWith; setChatWith(null); setOpenDesk(d); setDraft(detail); setAdding(true); }} />
       )}
       {/* Tombol mengambang untuk ngobrol dengan Mika, seperti tombol bantuan di situs web. */}
       {mika && !chatWith && !openDesk && !openTask && !openHuman && (
-        <button className="mikafab" onClick={() => setChatWith(mika)} aria-label="Ngobrol dengan Mika, manajer kantor">
+        <button className="mikafab" onClick={() => setChatWith(mika)} aria-label={`Ngobrol dengan ${MANAGER}, manajer kantor`}>
           <span className="mf-av">{mika.avatar ? <img src={mika.avatar} alt="" /> : (mika.emoji ?? "🦄")}</span>
-          <span className="mf-txt"><b>Tanya Mika</b><small>brainstorm, task, worker baru</small></span>
+          <span className="mf-txt"><b>Tanya {MANAGER}</b><small>brainstorm, task, worker baru</small></span>
         </button>
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
