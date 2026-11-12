@@ -126,7 +126,10 @@ const seenKey = (userId: string) => `kantor_seen_${userId.replace(/[^0-9a-zA-Z]/
 const presenceIssueId = new Map<string, string>();
 const isPresence = (i: Issue) => !!(i.metadata ?? {})[PRESENCE_TAG] || i.title === PRESENCE_TITLE;
 /** Task tersembunyi milik Virtual Office (chat antar orang, papan kehadiran): tidak pernah tampil sebagai pekerjaan. */
-export const isHiddenIssue = (i: Issue) => isPresence(i) || !!(i.metadata ?? {}).kantor_dm || i.title.startsWith("💬 Chat");
+export const isHiddenIssue = (i: Issue) => isPresence(i) || isReminder(i) || !!(i.metadata ?? {}).kantor_dm || i.title.startsWith("💬 Chat");
+/** A Telegram reminder (see lib/reminders.ts): kept out of the board and the office. */
+export const REMIND_PREFIX = "⏰";
+export const isReminder = (i: Issue) => i.title.startsWith(REMIND_PREFIX) || !!(i.metadata ?? {}).kantor_remind_at;
 
 async function presenceIssue(wsId: string) {
   const hit = presenceIssueId.get(wsId);
@@ -305,7 +308,8 @@ export async function loadWorkspace(wsPick?: string | null) {
   }
   const kantor = (settings.kantor ?? {}) as KantorSettings;
   const moved = (((settings.kantor_watch ?? {}) as { moved?: Moved }).moved ?? {}) as Moved;
-  return { ...dir, workspace: ws, issues, runs, kantor, seen, moved };
+  const reminders = everything.filter(isReminder);
+  return { ...dir, workspace: ws, issues, reminders, runs, kantor, seen, moved };
 }
 export type Snapshot = Awaited<ReturnType<typeof loadWorkspace>>;
 

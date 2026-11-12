@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { inviteMember, createAgent, loadDirectory, updateAgent, workspace, me } from "@/lib/multica";
 import { AGENT_REPORT_FORMAT, FORMAT_MARKER } from "@/lib/digest";
+import { AGENT_REMINDERS, REMIND_MARKER } from "@/lib/reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
         "Reply in the language the member uses (usually Indonesian). Keep answers short and concrete, " +
         "post results and files on the issue, and move the issue to in_review when your part is done so a human can check it.";
       const agent = await createAgent(ws, {
-        name, description: role, instructions: instructions.includes(FORMAT_MARKER) ? instructions : instructions + "\n" + AGENT_REPORT_FORMAT, runtime_id: b.runtimeId, visibility: "workspace", max_concurrent_tasks: 2,
+        name, description: role, instructions: [instructions, instructions.includes(FORMAT_MARKER) ? "" : AGENT_REPORT_FORMAT, instructions.includes(REMIND_MARKER) ? "" : AGENT_REMINDERS].filter(Boolean).join("\n"), runtime_id: b.runtimeId, visibility: "workspace", max_concurrent_tasks: 2,
         avatar_url: b.emoji?.trim() ? `emoji:${b.emoji.trim()}` : null,
       });
       return NextResponse.json({ ok: true, id: agent.id, message: `${name} joined the team! Give them a first task from the Task Board.` });

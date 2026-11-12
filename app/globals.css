@@ -838,3 +838,19 @@ svg.px{display:inline-block;vertical-align:-0.22em;flex:none;image-rendering:pix
 .chatbtn svg.px{width:15px;height:15px;vertical-align:0}
 .emojipick svg.px{width:24px;height:24px;vertical-align:middle}
 .kc-who i svg.px,.mp-av svg.px{width:80%;height:80%}
+
+/* ===== Reminders ===== */
+.rm-new{display:flex;flex-direction:column;gap:8px}
+.rm-new .sect{margin:0}
+.rm-when{display:flex;gap:8px;flex-wrap:wrap}
+.rm-when .input[type=date]{flex:1 1 140px;min-width:0}
+.rm-when .input[type=time]{flex:0 1 110px;min-width:0}
+.note.good{border-style:solid;border-color:var(--teal);background:color-mix(in srgb,var(--teal) 14%,var(--panel))}
+.rm-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rm-list li{display:flex;gap:10px;align-items:center;border:2px solid var(--line);border-radius:10px;background:var(--panel);padding:10px}
+.rm-ic{font-size:20px;line-height:1}
+.rm-ic svg.px{width:1em;height:1em;vertical-align:-0.12em}
+.rm-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rm-t b{font-size:13.5px;overflow-wrap:anywhere}
+.rm-t small{font-size:12.5px;color:var(--muted)}
+.reminddrawer .dbody > h3.sect{margin:6px 0 0}

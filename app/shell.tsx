@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import TaskPanel from "./task-panel";
 import type { InboxView } from "./api/inbox/route";
 import Messages from "./messages";
+import Reminders from "./reminders";
 import { Px, PxText, type PxName } from "./pixel-icon";
 
 export type Nav = { id: string; slug: string; name: string; attention?: number; switchOpen?: boolean };
@@ -85,6 +86,7 @@ export default function Shell({ buildings, current, section, children }: { build
   const [dmOpen, setDmOpen] = useState(false);
   const [dmWith, setDmWith] = useState<string | null>(null);
   const [dmUnread, setDmUnread] = useState(0);
+  const [remindOpen, setRemindOpen] = useState(false);
   useEffect(() => {
     const load = () => fetch(`/api/dm?ws=${current.id}`).then(r => r.json()).then(j => typeof j.unread === "number" && setDmUnread(j.unread)).catch(() => {});
     load(); const t = setInterval(load, INBOX_MS); return () => clearInterval(t);
@@ -169,6 +171,9 @@ export default function Shell({ buildings, current, section, children }: { build
             <span className="sl-ic"><Px name="chat" /></span>{open && <span className="sl-t"><b>Messages</b><small>chat with your teammates</small></span>}
             {dmUnread > 0 && <span className="sl-badge" aria-label={`${dmUnread} unread`}>{dmUnread > 99 ? "99+" : dmUnread}</span>}
           </button>
+          <button className="side-link" onClick={() => { setRemindOpen(true); if (narrow()) toggle(false); }} title={tip("Reminders")}>
+            <span className="sl-ic"><Px name="clock" /></span>{open && <span className="sl-t"><b>Reminders</b><small>sent to your Telegram</small></span>}
+          </button>
           <button className="side-link" onClick={() => { setInboxOpen(true); if (narrow()) toggle(false); }} title={tip(unread ? `Notifications (${unread} unread)` : "Notifications")}>
             <span className="sl-ic"><Px name="bell" /></span>{open && <span className="sl-t"><b>Notifications</b><small>mentions, reviews & updates</small></span>}
             {unread > 0 && <span className="sl-badge" aria-label={`${unread} unread`}>{unread > 99 ? "99+" : unread}</span>}
@@ -211,6 +216,7 @@ export default function Shell({ buildings, current, section, children }: { build
           </div>
         </>
       )}
+      {remindOpen && <Reminders ws={current.id} onClose={() => setRemindOpen(false)} />}
       {newWs && <NewWorkspace onClose={() => setNewWs(false)} />}
       {dmOpen && <Messages ws={current.id} start={dmWith} onClose={() => { setDmOpen(false); setDmWith(null); }} onUnread={onDmUnread} />}
       {task && <div className="scrim" onClick={() => { setTask(null); loadItems(); }} />}

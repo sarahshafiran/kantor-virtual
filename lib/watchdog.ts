@@ -4,10 +4,11 @@
 //    tugas untuk manusia, login AI kedaluwarsa, dan ringkasan pagi (telat & berisiko).
 // Catatan "sudah dikirim / sudah diulang" disimpan di pengaturan workspace supaya tidak dobel.
 import "server-only";
-import { workspaces, loadWorkspace, rerunIssue, updateAgent, call_ as call, type Run, type Snapshot, type Moved } from "./multica";
+import { workspaces, loadWorkspace, rerunIssue, updateAgent, updateIssue, call_ as call, type Run, type Snapshot, type Moved } from "./multica";
 import { isQuotaError, isLoginError, quotaResetAt, fmtTime, quotaStates } from "./quota";
 import { friendlyTitle } from "./titles";
 import { telegram, telegramReady, botFor } from "./telegram";
+import { remindAt, remindNotes, reminderText, fmtWhen, REMIND_META } from "./reminders";
 
 type Memory = { sent?: Record<string, string>; retried?: Record<string, string>; started?: string; moved?: Moved };
 const ACTIVE = new Set(["queued", "dispatched", "running", "in_progress", "preparing", "started"]);
@@ -158,6 +159,25 @@ export async function runWatchdog(opts: { notify?: boolean; dryRun?: boolean } =
           late.length ? `\n🔴 Telat (${late.length}):\n${late.slice(0, 8).map(line).join("\n")}` : "",
           soon.length ? `\n🟠 Tenggat ≤ 2 hari (${soon.length}):\n${soon.slice(0, 8).map(line).join("\n")}` : ""].join("\n"));
       }
+    }
+
+    // 5) Reminders whose time has come: send to the person's Telegram, then close the reminder.
+    //    Unlike other notices these are sent even on the very first run, and retried until Telegram accepts them.
+    for (const r of s.reminders.filter(i => !["done", "cancelled", "canceled"].includes(i.status))) {
+      const desc = (r.metadata ?? {})[REMIND_META] ? null
+        : (await call<{ description?: string | null }>("GET", `/api/issues/${r.id}`, w.id).catch(() => null))?.description ?? null;
+      const at = remindAt(r, desc);
+      if (!at || at.getTime() > now || mem.sent![`remind:${r.id}`]) continue;
+      if (dry) { report.push(`[uji] reminder: ${reminderText(r)} (${fmtWhen(at)})`); continue; }
+      if (!canSend) continue;
+      const who = r.assignee_type === "member" ? memberName(r.assignee_id) : null;
+      const late = now - at.getTime() > 15 * 60000 ? `\n(set for ${fmtWhen(at)})` : "";
+      const notes = remindNotes(desc);
+      const sent = await telegram(`⏰ **Reminder:** ${reminderText(r)}${notes ? `\n\n${notes.slice(0, 600)}` : ""}${late}`, who, tg);
+      if (!sent) continue;
+      mem.sent![`remind:${r.id}`] = new Date().toISOString();
+      await updateIssue(w.id, r.id, { status: "done" }).catch(() => {});
+      report.push(`reminder: ${reminderText(r)}`);
     }
 
     if (dry) {
