@@ -32,14 +32,13 @@ function ChatWith({ name, onChat, className }: { name: string; onChat: () => voi
   return <button type="button" className={`chatwith ${className ?? ""}`} onClick={e => { e.stopPropagation(); onChat(); }} title={`Message ${name}`} aria-label={`Message ${name}`}><Px name="chat" /></button>;
 }
 
-function Presence({ name, at, onChat }: { name: string; at?: string; onChat?: () => void }) {
+function Presence({ name, at }: { name: string; at?: string }) {
   const mins = at ? (Date.now() - Date.parse(at)) / 60000 : Infinity;
   const on = mins < 5;
   const label = on ? "in the office" : !at ? "never opened" : ago(mins);
   return (
     <span className={`person ${on ? "on" : ""}`} title={`${name}: ${on ? "has the office open" : "last opened the office " + label}`}>
       <span className="initial">{name.slice(0, 1).toUpperCase()}</span>{name} <small>{label}</small>
-      {onChat && <ChatWith name={name} onChat={onChat} />}
     </span>
   );
 }
@@ -268,7 +267,7 @@ export default function OfficeView({ office, attention, people, seen, meId }: { 
             <OfficeSwitch key={office.workspaceId + String(office.switchOpen)} ws={office.workspaceId} name={office.workspace} switchOpen={office.switchOpen} laptopOn={office.open} parked={office.parked}
               onDone={msg => { setToast(msg); refresh(); }} />
             <span className="hgroup" aria-label="Team">
-              {people.map(p => <Presence key={p} name={p} at={seen[p]} onChat={chatTo(p)} />)}
+              {people.map(p => <Presence key={p} name={p} at={seen[p]} />)}
             </span>
             <ThemeToggle />
             <span className="clock">{refreshing ? <><span className="spinner sm" /> Refreshing…</> : `Updated ${office.updatedAt}`}</span>
