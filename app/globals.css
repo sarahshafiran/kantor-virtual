@@ -622,10 +622,10 @@ main.pagewide{display:flex;flex-direction:column;gap:16px;padding-block:20px}
 textarea.input{resize:vertical}
 
 /* ===== Kru ===== */
-.crew{display:flex;flex-direction:column;gap:12px}
+.crew{display:flex;flex-direction:column;gap:12px;align-self:stretch;width:100%}
 .crew h2{font-size:20px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .crew h2 small{font-family:var(--f-body);font-size:13px;color:var(--muted);font-weight:400}
-.crewgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.crewgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:14px}
 .mate{border:3px solid var(--ink);border-radius:14px;background:var(--panel);padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:4px 4px 0 var(--ink)}
 .mate.human{background:linear-gradient(var(--todo-soft) 0 6px,var(--panel) 6px)}
 .mate.agent{background:linear-gradient(color-mix(in srgb,var(--teal) 30%,var(--panel)) 0 6px,var(--panel) 6px)}
