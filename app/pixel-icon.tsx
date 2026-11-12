@@ -11,7 +11,7 @@ const COLORS: Record<string, string> = {
 
 const MAPS = {
   agent: [".....yy.....", ".....oo.....", "..oooooooo..", "..owwwwwwo..", "..owtwwtwo..", "..owwwwwwo..", "..owwppwwo..", "..oooooooo..", ".ovvvvvvvvo.", ".ovvyyyyvvo.", ".ovvvvvvvvo.", ".oooooooooo."],
-  chat: [".oooooooooo.", "otttttttttto", "otttttttttto", "ottwttwttwto", "otttttttttto", "otttttttttto", ".oottoooooo.", "..otto......", "..oo........"],
+  chat: [".oooooooooo.", "owwwwwwwwwwo", "owwwwwwwwwwo", "owwowwowwowo", "owwwwwwwwwwo", "owwwwwwwwwwo", ".oowwoooooo.", "..owwo......", "..oo........"],
   lock: ["....oooo....", "...o....o...", "...o....o...", "...o....o...", ".oooooooooo.", ".oyyyyyyyyo.", ".oyyyooyyyo.", ".oyyyooyyyo.", ".oyyyyyyyyo.", ".oooooooooo."],
   unlock: ["......oooo..", ".....o....o.", ".....o....o.", ".....o......", ".oooooooooo.", ".oyyyyyyyyo.", ".oyyyooyyyo.", ".oyyyooyyyo.", ".oyyyyyyyyo.", ".oooooooooo."],
   coffee: ["...g..g.....", "....g..g....", "...g..g.....", "............", ".ooooooooo..", ".owwwwwwwooo", ".ottttttto.o", ".owwwwwwwo.o", ".owwwwwwwooo", "..owwwwwo...", "..ooooooo..."],
