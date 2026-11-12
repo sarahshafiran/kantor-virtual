@@ -32,7 +32,7 @@ export default function FilePicker({ files, onChange }: { files: File[]; onChang
       {files.map((f, i) => (
         <span key={f.name + i} className="chip">
           <Px name={f.type.startsWith("image/") ? "image" : "file"} /> {f.name}
-          <button type="button" className="chipx" aria-label={`Remove ${f.name}`} onClick={() => onChange(files.filter((_, j) => j !== i))}>✕</button>
+          <button type="button" className="chipx" aria-label={`Remove ${f.name}`} onClick={() => onChange(files.filter((_, j) => j !== i))}><Px name="close" size="0.8em" /></button>
         </span>
       ))}
     </div>

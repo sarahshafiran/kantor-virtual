@@ -3,6 +3,7 @@
 //   o garis (ikut warna teks, jadi tetap terlihat di mode terang/gelap)
 //   w putih · g abu · x merah · p y t r v = pink, kuning, teal, oranye, ungu dari tema yang dipilih
 // Gambar otomatis diletakkan di tengah kotak, jadi peta tidak harus pas di tengah.
+import type { HTMLAttributes, ReactNode } from "react";
 
 const COLORS: Record<string, string> = {
   o: "currentColor", w: "#FFFFFF", g: "var(--off)", x: "#E8264B",
@@ -60,6 +61,13 @@ const MAPS = {
   refresh: ["...tttttt...", "..t......t.t", ".t........tt", ".t......ttt.", ".t..........", "..........t.", ".ttt......t.", "tt........t.", "t.t......t..", "...tttttt..."],
   desk: ["..oooooooo..", "..otttttto..", "..otttttto..", "..oooooooo..", ".....oo.....", "oooooooooooo", "oppppppppppo", "oooooooooooo", ".o........o.", ".o........o."],
   lounge: ["..oooooooo..", "..ovvvvvvo..", "..ovvvvvvo..", "ooovvvvvvooo", "ovoooooooovo", "ovvvvvvvvvvo", "oooooooooooo", ".o........o."],
+  check: ["..........oo", ".........oto", "........otto", ".oo....otto.", "otto..otto..", ".ottootto...", "..otttto....", "...otto.....", "....oo......"],
+  close: ["oo......oo", "ooo....ooo", ".ooo..ooo.", "..oooooo..", "...oooo...", "...oooo...", "..oooooo..", ".ooo..ooo.", "ooo....ooo", "oo......oo"],
+  plus: ["....oo....", "....oo....", "....oo....", "....oo....", "oooooooooo", "oooooooooo", "....oo....", "....oo....", "....oo....", "....oo...."],
+  back: ["....oo", "...ooo", "..ooo.", ".ooo..", "ooo...", "ooo...", ".ooo..", "..ooo.", "...ooo", "....oo"],
+  next: ["oo....", "ooo...", ".ooo..", "..ooo.", "...ooo", "...ooo", "..ooo.", ".ooo..", "ooo...", "oo...."],
+  info: ["...oooooo...", ".oottwwttoo.", ".otttwwttto.", "otttttttttto", "otttwwwtttto", "ottttwwtttto", "ottttwwtttto", "ottttwwtttto", ".ottwwwwtto.", ".oottttttoo.", "...oooooo..."],
+  play: ["oo......", "oyoo....", "oyyyoo..", "oyyyyyoo", "oyyyyyyo", "oyyyyyoo", "oyyyoo..", "oyoo....", "oo......"],
   todo: ["....oooo....", ".oooyyyyooo.", ".owwoooowwo.", ".owwwwwwwwo.", ".owvwgggwwo.", ".owwwwwwwwo.", ".owvwgggwwo.", ".owwwwwwwwo.", ".owvwggwwwo.", ".owwwwwwwwo.", ".oooooooooo."],
   // Ikon project
   bag: ["....oooo....", "...o....o...", "...o....o...", ".oooooooooo.", ".oppppppppo.", ".oppppppppo.", ".opppwwpppo.", ".oppppppppo.", ".oppppppppo.", ".oooooooooo."],
@@ -143,8 +151,56 @@ const EMOJI: Record<string, PxName> = {
   "💡": "idea", "🗓": "calendar", "📅": "calendar", "🚀": "rocket", "🧭": "compass", "🎬": "clapper", "📁": "folder", "📋": "todo",
   "🦄": "unicorn", "👾": "invader", "🐳": "whale", "🐋": "whale", "🐧": "penguin", "⭐": "star", "🌟": "star", "⚡": "bolt", "🦊": "fox",
   "🐼": "panda", "🦉": "owl", "🐙": "octopus", "🐝": "bee", "🐢": "turtle", "🦜": "parrot", "🦁": "lion", "🐨": "koala", "🤖": "agent",
+  // Emoji yang sering muncul di teks (komentar, hasil agen, judul): ikut jadi pixel.
+  "✅": "done", "✔": "check", "☑": "done", "✓": "check", "✏": "edit", "📝": "edit", "🔒": "lock", "🔐": "lock", "🔓": "unlock",
+  "🌙": "moon", "😴": "moon", "💤": "moon", "💬": "chat", "🗨": "chat", "🔁": "refresh", "🔄": "refresh", "☕": "coffee", "🌴": "coffee",
+  "⚠": "alert", "❗": "alert", "‼": "alert", "🆘": "alert", "📄": "file", "📃": "file", "📑": "file", "☀": "sun", "🌞": "sun",
+  "🔴": "dot-late", "🟠": "dot-risk", "🟢": "dot-on", "🟡": "dot-wait", "⚪": "dot-off", "⚫": "dot-off", "🏢": "office", "🏬": "office",
+  "🏠": "home", "🏡": "home", "👀": "eyes", "👁": "eyes", "🎉": "party", "🥳": "party", "🎊": "party", "🔨": "doing", "🛠": "gear", "🔧": "gear",
+  "👋": "wave", "🙋": "person", "👤": "person", "🧑": "person", "👩": "person", "👨": "person", "👥": "team", "🤝": "team", "✨": "sparkle",
+  "📎": "clip", "🖇": "clip", "🔔": "bell", "🛋": "lounge", "📊": "chart", "📈": "chart", "📉": "chart", "🖼": "image", "🌐": "web", "🔗": "web",
+  "📌": "pin", "📍": "pin", "⏸": "pause", "⏰": "clock", "⏱": "clock", "🕒": "clock", "⌛": "clock", "⏳": "clock", "❌": "failed", "⛔": "failed",
+  "🚫": "failed", "🔥": "busy", "💼": "hire", "📧": "mail", "✉": "mail", "📨": "mail", "📬": "mail", "📥": "mail", "🗂": "folder", "📂": "folder",
+  "🖥": "monitor", "💻": "monitor", "📆": "calendar", "🧠": "idea", "🏆": "star", "💪": "bolt", "📦": "bag", "🎯": "compass", "👌": "check",
+  "🚦": "todo", "🗒": "todo", "🧾": "todo", "📢": "mention",
+  "ℹ": "info", "▶": "play", "⏩": "play", "➡": "next", "⬅": "back", "➕": "plus", "✖": "close", "❎": "close",
 };
 export const pxFor = (e?: string | null): PxName | null => (e ? EMOJI[e.replace(/\uFE0F/g, "").trim()] ?? null : null);
+
+// Emoji di dalam teks bebas: yang punya versi pixel diganti, sisanya tetap emoji.
+const EMOJI_RE = /(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*|[✓✔]\uFE0F?)/gu;
+
+/** Teks biasa (judul, keterangan) dengan emoji yang diganti ikon pixel. */
+export function PxText({ text }: { text: string }) {
+  if (!text) return null;
+  const parts = text.split(EMOJI_RE);
+  return <>{parts.map((p, i) => { const n = i % 2 ? pxFor(p) : null; return n ? <Px key={i} name={n} /> : p; })}</>;
+}
+
+// Untuk ReactMarkdown: emoji di teks hasil agen / komentar jadi ikon pixel (kode dibiarkan apa adanya).
+type HNode = { type: string; tagName?: string; value?: string; properties?: Record<string, unknown>; children?: HNode[] };
+export function rehypePx() {
+  const walk = (n: HNode) => {
+    if (!n.children || n.tagName === "code" || n.tagName === "pre") return;
+    n.children = n.children.flatMap(c => {
+      if (c.type !== "text" || !c.value) { walk(c); return [c]; }
+      const parts = c.value.split(EMOJI_RE);
+      if (parts.length === 1) return [c];
+      return parts.flatMap((p, i): HNode[] => {
+        if (!p) return [];
+        const name = i % 2 ? pxFor(p) : null;
+        return name ? [{ type: "element", tagName: "span", properties: { dataPx: name }, children: [] }] : [{ type: "text", value: p }];
+      });
+    });
+  };
+  return (tree: HNode) => walk(tree);
+}
+/** Pasangan rehypePx: ubah penanda tadi jadi <Px>. */
+export function PxSpan(props: Record<string, unknown> & { node?: unknown; children?: ReactNode }) {
+  const { node: _n, ...rest } = props;
+  const name = rest["data-px"] as PxName | undefined;
+  return name ? <Px name={name} /> : <span {...(rest as HTMLAttributes<HTMLSpanElement>)} />;
+}
 
 /** Emoji pilihan orang (ikon project / avatar): tampil sebagai ikon pixel kalau ada versinya, kalau tidak tetap emoji. */
 export function Emo({ e, size }: { e: string; size?: number | string }) {

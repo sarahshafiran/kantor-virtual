@@ -7,7 +7,7 @@ import TaskPanel from "../task-panel";
 import ThemeToggle from "../theme-toggle";
 import ChatPanel, { isManager } from "../chat-panel";
 import { openChat } from "../messages";
-import { Px, Emo, StateIcon, type PxName } from "../pixel-icon";
+import { Px, Emo, PxText, StateIcon, type PxName } from "../pixel-icon";
 
 const LEVEL: Record<Load["level"], { icon: PxName; label: string; tip: string }> = {
   santai: { icon: "dot-on", label: "Free", tip: "no open tasks" },
@@ -88,7 +88,7 @@ function MateCard({ m, team, onOpenTask, onChat, onToast }: { m: Mate; team: Tea
         <div className="tasks">
           {openTasks.map(t => (
             <button key={t.id} className="tasklink" onClick={() => onOpenTask(t.id)}>
-              <span className="t">{t.title}<small>{t.project ? <>{t.projectIcon ? <Emo e={t.projectIcon} /> : <Px name="folder" />} {t.project}</> : <><Px name="loose" /> No project</>}</small></span>
+              <span className="t"><PxText text={t.title} /><small>{t.project ? <>{t.projectIcon ? <Emo e={t.projectIcon} /> : <Px name="folder" />} {t.project}</> : <><Px name="loose" /> No project</>}</small></span>
               <span className="meta">
                 <span className={`pill p-${t.col === "in_review" ? "review" : t.col === "in_progress" ? "doing" : "queued"}`}>{COL_LABEL[t.col]}</span>
                 {t.dueText && <span className={`due ${t.dueFlag ?? "ok"}`}>{t.dueText}</span>}
@@ -161,7 +161,7 @@ function Recruit({ team, onDone }: { team: Team; onDone: (msg: string | null) =>
         )}
         {err && <div className="note bad">{err}</div>}
         <div className="row">
-          {kind && <button type="button" className="btn" onClick={() => { setKind(null); setErr(null); }}>‹ Back</button>}
+          {kind && <button type="button" className="btn" onClick={() => { setKind(null); setErr(null); }}><Px name="back" size="0.8em" /> Back</button>}
           <button type="button" className="btn" onClick={() => onDone(null)}>Cancel</button>
           {kind && <button className="btn primary" disabled={busy || (kind === "human" ? !email.trim() : !name.trim() || !rt)}>
             {busy ? <><span className="spinner sm" /> Working…</> : kind === "human" ? <><Px name="mail" /> Send invite</> : <><Px name="sparkle" /> Create agent</>}</button>}
@@ -190,7 +190,7 @@ export default function TeamView({ team }: { team: Team }) {
         <div className="wrap hbar">
           <div className="brand"><h1><Px name="team" /> Team Members</h1><p className="pdesc">Who works here, how busy they are, and which projects they&apos;re on.</p></div>
           <div className="chiprow">
-            <button className="btn primary" onClick={() => setRecruit(true)}>+ Add to team</button>
+            <button className="btn primary" onClick={() => setRecruit(true)}><Px name="plus" size="0.9em" /> Add to team</button>
             <ThemeToggle />
             <span className="clock">{refreshing ? <><span className="spinner sm" /> Refreshing…</> : `${team.humans.length} ${team.humans.length === 1 ? "person" : "people"} · ${team.agents.length} agent${team.agents.length === 1 ? "" : "s"}`}</span>
           </div>

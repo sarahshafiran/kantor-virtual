@@ -4,12 +4,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import FilePicker, { uploadAll } from "./file-picker";
 import FilePreview from "./file-preview";
-import { Px, Emo, type PxName } from "./pixel-icon";
+import { Px, Emo, PxSpan, rehypePx, type PxName } from "./pixel-icon";
 
 type Session = { id: string; title: string; updatedAt: string; unread: number; last: string };
 type Msg = { id: string; mine: boolean; text: string; when: string; failed: string | null; files: { id: string; name: string; url: string }[] };
 
-const md = (t: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ a: (p) => <a {...p} target="_blank" rel="noreferrer" /> }}>{t}</ReactMarkdown>;
+const md = (t: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePx]} components={{ a: (p) => <a {...p} target="_blank" rel="noreferrer" />, span: PxSpan }}>{t}</ReactMarkdown>;
 
 /** Name of the office-manager agent. Set per install with NEXT_PUBLIC_KANTOR_MANAGER. */
 export const MANAGER = process.env.NEXT_PUBLIC_KANTOR_MANAGER?.trim() || "Mika";
@@ -88,7 +88,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
       <div className="dhead">
         <span className="avatar">{agent.emoji ? <Emo e={agent.emoji} /> : <Px name="chat" />}</span>
         <div className="meta"><h2>Chat with {agent.name}</h2><div className="role">Talk freely. Nothing gets done until you ask.</div></div>
-        <button className="x" onClick={onClose} aria-label="Close">✕</button>
+        <button className="x" onClick={onClose} aria-label="Close"><Px name="close" size="1em" /></button>
       </div>
 
       <div className="chatbar">
@@ -96,7 +96,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
           {(sessions ?? []).map(s => <option key={s.id} value={s.id}>{s.title}{s.unread ? ` (${s.unread} new)` : ""}</option>)}
           {!sid && <option value="">New chat</option>}
         </select>
-        <button className="btn sm" onClick={() => { setSid(null); setMsgs([]); }}>+ New chat</button>
+        <button className="btn sm" onClick={() => { setSid(null); setMsgs([]); }}><Px name="plus" size="0.9em" /> New chat</button>
         {isMika && <button className="btn sm" onClick={() => setShowHelp(h => !h)} aria-expanded={showHelp}><Px name="idea" /> What can {MANAGER} do?</button>}
       </div>
 

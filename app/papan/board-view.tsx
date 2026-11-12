@@ -6,14 +6,14 @@ import { COLS } from "@/lib/board-cols";
 import TaskPanel from "../task-panel";
 import ThemeToggle from "../theme-toggle";
 import NewProject from "../new-project";
-import { Px, Emo } from "../pixel-icon";
+import { Px, Emo, PxText } from "../pixel-icon";
 
 const LOOSE = "none";
 
 function CardItem({ c, showProject, onOpen }: { c: Card; showProject: boolean; onOpen: () => void }) {
   return (
     <button className={`kcard ${c.dueFlag ?? ""}`} onClick={onOpen}>
-      <b className="kc-t">{c.title}</b>
+      <b className="kc-t"><PxText text={c.title} /></b>
       {showProject && <span className="kc-proj">{c.project ? <>{c.projectIcon ? <Emo e={c.projectIcon} /> : <Px name="folder" />} {c.project}</> : <><Px name="loose" /> No project</>}</span>}
       <span className="kc-foot">
         {c.who ? <span className={`kc-who ${c.who.kind}`}><i>{c.who.emoji ? <Emo e={c.who.emoji} /> : (c.who.kind === "agent" ? <Px name="agent" /> : c.who.name.slice(0, 1).toUpperCase())}</i>{c.who.name}</span>
@@ -50,13 +50,13 @@ function NewCard({ board, project, onDone }: { board: Board; project: string; on
           <label>Who takes it?
             <select className="input" value={who} onChange={e => setWho(e.target.value)}>
               <option value="">Nobody yet (decide later)</option>
-              <optgroup label="AI agents">{board.people.filter(p => p.kind === "agent").map(p => <option key={p.id} value={`agent:${p.id}`}>{p.emoji ? `${p.emoji} ` : ""}{p.name}</option>)}</optgroup>
+              <optgroup label="AI agents">{board.people.filter(p => p.kind === "agent").map(p => <option key={p.id} value={`agent:${p.id}`}>{p.name}</option>)}</optgroup>
               <optgroup label="People">{board.people.filter(p => p.kind === "member").map(p => <option key={p.id} value={`member:${p.id}`}>{p.name}</option>)}</optgroup>
             </select>
           </label>
           <label>Project
             <select className="input" value={proj} onChange={e => setProj(e.target.value)}>
-              {board.projects.map(p => <option key={p.id} value={p.id}>{p.icon ? `${p.icon} ` : ""}{p.name}</option>)}
+              {board.projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               <option value="">No project</option>
             </select>
           </label>
@@ -104,7 +104,7 @@ export default function BoardView({ board, initialProject }: { board: Board; ini
         <div className="wrap hbar">
           <div className="brand"><h1><Px name="board" /> Task Board</h1><p className="pdesc">Every task in this workspace, by project.</p></div>
           <div className="chiprow">
-            <button className="btn primary" onClick={() => setAdding(true)}>+ New task</button>
+            <button className="btn primary" onClick={() => setAdding(true)}><Px name="plus" size="0.9em" /> New task</button>
             <ThemeToggle />
             <span className="clock">{refreshing ? <><span className="spinner sm" /> Refreshing…</> : `${total} open task${total === 1 ? "" : "s"}`}</span>
           </div>
@@ -126,7 +126,7 @@ export default function BoardView({ board, initialProject }: { board: Board; ini
             <span className="pt-ic"><Px name="loose" /></span><span className="pt-t"><b>No project</b><small>{board.loose} open</small></span>
           </button>
           <button className="ptab ptab-new" onClick={() => setNewProject(true)}>
-            <span className="pt-ic">＋</span><span className="pt-t"><b>New project</b><small>group tasks under a goal</small></span>
+            <span className="pt-ic"><Px name="plus" /></span><span className="pt-t"><b>New project</b><small>group tasks under a goal</small></span>
           </button>
         </nav>
 
@@ -142,7 +142,7 @@ export default function BoardView({ board, initialProject }: { board: Board; ini
               <option value="agents">All agents</option>
               <option value="humans">All people</option>
               <option value="nobody">Unassigned</option>
-              {board.people.map(p => <option key={p.id} value={p.id}>{p.kind === "agent" && p.emoji ? `${p.emoji} ` : ""}{p.name}</option>)}
+              {board.people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
         </div>

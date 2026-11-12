@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import TaskPanel from "./task-panel";
 import type { InboxView } from "./api/inbox/route";
 import Messages from "./messages";
-import { Px, type PxName } from "./pixel-icon";
+import { Px, PxText, type PxName } from "./pixel-icon";
 
 export type Nav = { id: string; slug: string; name: string; attention?: number; switchOpen?: boolean };
 export type Section = "kantor" | "papan" | "tim";
@@ -146,11 +146,11 @@ export default function Shell({ buildings, current, section, children }: { build
                   <span className="ws-av sm">{initial(b.name)}</span><span className="ws-n">{b.name}</span>
                   {b.switchOpen === false && <span title="Office closed"><Px name="lock" /></span>}
                   {b.attention ? <span className="count">{b.attention}</span> : null}
-                  {b.id === current.id && <span className="ws-check">✓</span>}
+                  {b.id === current.id && <span className="ws-check"><Px name="check" /></span>}
                 </Link>
               ))}
               <button className="ws-opt ws-new" onClick={() => { setWsOpen(false); setNewWs(true); }}>
-                <span className="ws-av sm">+</span><span className="ws-n">New workspace</span>
+                <span className="ws-av sm"><Px name="plus" size="0.9em" /></span><span className="ws-n">New workspace</span>
               </button>
             </div>
           )}
@@ -184,7 +184,7 @@ export default function Shell({ buildings, current, section, children }: { build
             <div className="dhead">
               <span className="avatar"><Px name="bell" /></span>
               <div className="meta"><h2>Notifications</h2><div className="role">{unread ? `${unread} unread` : <>You&apos;re all caught up <Px name="coffee" /></>}</div></div>
-              <button className="x" onClick={() => setInboxOpen(false)} aria-label="Close">✕</button>
+              <button className="x" onClick={() => setInboxOpen(false)} aria-label="Close"><Px name="close" size="1em" /></button>
             </div>
             <div className="dbody">
               {unread > 0 && <div className="chiprow"><button className="btn sm" onClick={() => read()}><Px name="done" /> Mark all as read</button></div>}
@@ -199,7 +199,7 @@ export default function Shell({ buildings, current, section, children }: { build
                       if (i.dmWith) { setInboxOpen(false); setDmWith(i.dmWith); setDmOpen(true); } else if (i.issueId) setTask(i.issueId);
                     }}>
                       <span className="ib-ic"><Px name={i.icon} /></span>
-                      <span className="ib-t"><b>{i.label}</b><span className="ib-title">{i.title}</span>{i.excerpt && <small>{i.excerpt}</small>}</span>
+                      <span className="ib-t"><b>{i.label}</b><span className="ib-title"><PxText text={i.title} /></span>{i.excerpt && <small>{i.excerpt}</small>}</span>
                       <span className="ib-when">{i.when}{!i.read && <i className="ib-dot" aria-label="unread" />}</span>
                     </button>
                   </li>

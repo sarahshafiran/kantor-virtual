@@ -6,12 +6,12 @@ import remarkGfm from "remark-gfm";
 import type { TaskDetail } from "@/lib/detail";
 import FilePicker, { uploadAll } from "./file-picker";
 import FilePreview, { kindOf, ICON } from "./file-preview";
-import { Px, Emo } from "./pixel-icon";
+import { Px, Emo, PxText, PxSpan, rehypePx } from "./pixel-icon";
 import MentionBox, { mentionLink, keepMentionUrl } from "./mention-box";
 import { encodeMentions, type Mentionable } from "@/lib/mentions";
 import { answersToText } from "@/lib/digest";
 
-const md = (text: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} urlTransform={keepMentionUrl} components={{ a: mentionLink }}>{text}</ReactMarkdown>;
+const md = (text: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePx]} urlTransform={keepMentionUrl} components={{ a: mentionLink, span: PxSpan }}>{text}</ReactMarkdown>;
 const POLL_MS = 4000;
 type Tab = "chat" | "files" | "brief";
 
@@ -123,12 +123,12 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
             <button className="btn sm primary" disabled={!newName.trim() || !!busy}>Save</button>
             <button type="button" className="btn sm" onClick={() => setRenaming(false)}>Cancel</button>
           </form>
-        ) : <h2>{d?.title ?? "Loading…"}</h2>}
+        ) : <h2>{d ? <PxText text={d.title} /> : "Loading…"}</h2>}
         <div className="role">{d ? [d.assignee.name ?? "Unassigned", d.project ?? "No project"].join(" · ") : ""}
-          {d?.dueText && <span className={`due ${d.dueFlag ?? "ok"}`}>{d.dueFlag === "late" ? <><Px name="dot-late" /> </> : d.dueFlag === "risk" ? <><Px name="dot-risk" /> </> : d.dueFlag === "done" ? "✓ " : <><Px name="calendar" /> </>}{d.dueText}</span>}
+          {d?.dueText && <span className={`due ${d.dueFlag ?? "ok"}`}>{d.dueFlag === "late" ? <><Px name="dot-late" /> </> : d.dueFlag === "risk" ? <><Px name="dot-risk" /> </> : d.dueFlag === "done" ? <><Px name="check" /> </> : <><Px name="calendar" /> </>}{d.dueText}</span>}
         </div>
       </div>
-      <button className="x" onClick={onClose} aria-label="Close">✕</button>
+      <button className="x" onClick={onClose} aria-label="Close"><Px name="close" size="1em" /></button>
     </div>
   );
 
@@ -179,7 +179,7 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
                 )}
                 {d.live.state !== "idle" && (
                   <div className={`live live-${d.live.state}`} role="status">
-                    {d.live.state === "running" || d.live.state === "queued" ? <span className="dots"><i /><i /><i /></span> : null}{d.live.label}
+                    {d.live.state === "running" || d.live.state === "queued" ? <span className="dots"><i /><i /><i /></span> : null}<PxText text={d.live.label} />
                   </div>
                 )}
                 {d.live.state === "idle" && Date.now() < watchUntil && (
@@ -217,13 +217,13 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
         {/* ---- Right: your part ---- */}
         <section className="tp-you" aria-label="Your part">
           <div className="tp-scroll">
-            <div className={`situation m-${d.mode}`}><b>{d.situation}</b></div>
+            <div className={`situation m-${d.mode}`}><b><PxText text={d.situation} /></b></div>
 
             {dg && dg.summary.length > 0 && (
               <div className="digest">
                 <div className="dg-head"><b><Px name="sparkle" /> Summary</b><small>from {dg.from} · {dg.when}</small></div>
                 <ul>{dg.summary.map((s, i) => <li key={i}>{s}</li>)}</ul>
-                <button className="more" onClick={() => jumpTo(dg.messageId)}>Read the full output ›</button>
+                <button className="more" onClick={() => jumpTo(dg.messageId)}>Read the full output <Px name="next" size="0.8em" /></button>
               </div>
             )}
 

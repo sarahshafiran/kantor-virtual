@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { Plan } from "@/lib/office-control";
-import { Px } from "./pixel-icon";
+import { Px, PxText } from "./pixel-icon";
 
 /** Open/close the office for one workspace, with a preview before it runs. */
 export default function OfficeSwitch({ ws, name, switchOpen, laptopOn, parked, onDone }: {
@@ -40,7 +40,7 @@ export default function OfficeSwitch({ ws, name, switchOpen, laptopOn, parked, o
   const List = ({ title, items }: { title: string; items: { id: string; title: string }[] | string[] }) =>
     items.length ? (
       <div><div className="sect" style={{ margin: "6px 0 4px" }}>{title} ({items.length})</div>
-        <ul className="plainlist">{items.slice(0, 6).map(i => typeof i === "string" ? <li key={i}>{i}</li> : <li key={i.id}>{i.title}</li>)}
+        <ul className="plainlist">{items.slice(0, 6).map(i => typeof i === "string" ? <li key={i}>{i}</li> : <li key={i.id}><PxText text={i.title} /></li>)}
           {items.length > 6 && <li className="desc">and {items.length - 6} more</li>}</ul></div>
     ) : null;
 

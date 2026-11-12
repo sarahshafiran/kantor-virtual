@@ -5,9 +5,9 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { DmMessage, DmPerson } from "@/lib/dm";
 import { mentionLink, keepMentionUrl } from "./mention-box";
-import { Px } from "./pixel-icon";
+import { Px, PxSpan, rehypePx } from "./pixel-icon";
 
-const md = (t: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} urlTransform={keepMentionUrl} components={{ a: mentionLink }}>{t}</ReactMarkdown>;
+const md = (t: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePx]} urlTransform={keepMentionUrl} components={{ a: mentionLink, span: PxSpan }}>{t}</ReactMarkdown>;
 const POLL_MS = 5000;
 
 /** Ask the sidebar to open a chat with someone (used by the Message buttons on people cards). */
@@ -70,7 +70,7 @@ export default function Messages({ ws, start, onClose, onUnread }: { ws: string;
         <div className="dhead">
           {withId ? (
             <>
-              <button className="x" onClick={() => setWithId(null)} aria-label="Back to all messages">‹</button>
+              <button className="x" onClick={() => setWithId(null)} aria-label="Back to all messages"><Px name="back" size="1em" /></button>
               <span className="avatar dm-av">{initial(other?.name ?? "?")}</span>
               <div className="meta"><h2>{other?.name ?? "Chat"}</h2><div className="role">{other?.email ?? ""}</div></div>
             </>
@@ -80,7 +80,7 @@ export default function Messages({ ws, start, onClose, onUnread }: { ws: string;
               <div className="meta"><h2>Messages</h2><div className="role">Chat with the people on your team</div></div>
             </>
           )}
-          <button className="x" onClick={onClose} aria-label="Close">✕</button>
+          <button className="x" onClick={onClose} aria-label="Close"><Px name="close" size="1em" /></button>
         </div>
 
         {!withId ? (

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Px, type PxName } from "./pixel-icon";
+import { Px, PxSpan, rehypePx, type PxName } from "./pixel-icon";
 
 type F = { id: string; name: string; url: string };
 type Kind = "image" | "pdf" | "html" | "table" | "doc" | "text" | "other";
@@ -60,7 +60,7 @@ function Body({ f, kind, tall }: { f: F; kind: Kind; tall?: boolean }) {
       </div>
     );
   }
-  if (kind === "doc") return <div className="md pv-doc" style={{ maxHeight: h }}><ReactMarkdown remarkPlugins={[remarkGfm]}>{text!}</ReactMarkdown></div>;
+  if (kind === "doc") return <div className="md pv-doc" style={{ maxHeight: h }}><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePx]} components={{ span: PxSpan }}>{text!}</ReactMarkdown></div>;
   if (kind === "text") return <pre className="pv-text" style={{ maxHeight: h }}>{text}</pre>;
   return <p className="desc">This file can't be previewed here. Download it to open.</p>;
 }
@@ -85,7 +85,7 @@ export default function FilePreview({ f }: { f: F }) {
         <>
           <div className="scrim" style={{ zIndex: 40 }} onClick={() => setFull(false)} />
           <div className="modal pv-modal" role="dialog" aria-modal="true" aria-label={f.name} style={{ zIndex: 41 }}>
-            <div className="pv-head"><b><Px name={ICON[kind]} /> {f.name}</b><button className="x" onClick={() => setFull(false)} aria-label="Close">✕</button></div>
+            <div className="pv-head"><b><Px name={ICON[kind]} /> {f.name}</b><button className="x" onClick={() => setFull(false)} aria-label="Close"><Px name="close" size="1em" /></button></div>
             <Body f={f} kind={kind} tall />
           </div>
         </>

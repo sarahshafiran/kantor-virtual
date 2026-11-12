@@ -37,7 +37,7 @@ export default function NewProject({ ws, people, onDone }: { ws: string; people:
             <select className="input" value={lead} onChange={e => setLead(e.target.value)}>
               <option value="">Nobody yet</option>
               <optgroup label="People">{people.filter(p => p.kind === "member").map(p => <option key={p.id} value={`member:${p.id}`}>{p.name}</option>)}</optgroup>
-              <optgroup label="AI agents">{people.filter(p => p.kind === "agent").map(p => <option key={p.id} value={`agent:${p.id}`}>{p.emoji ? `${p.emoji} ` : ""}{p.name}</option>)}</optgroup>
+              <optgroup label="AI agents">{people.filter(p => p.kind === "agent").map(p => <option key={p.id} value={`agent:${p.id}`}>{p.name}</option>)}</optgroup>
             </select>
           </label>
           <label>Target date<input className="input" type="date" value={due} onChange={e => setDue(e.target.value)} /></label>

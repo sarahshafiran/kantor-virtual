@@ -9,7 +9,7 @@ import ThemeToggle from "./theme-toggle";
 import FilePicker, { uploadAll } from "./file-picker";
 import ChatPanel, { MANAGER, isManager } from "./chat-panel";
 import PixelDesk, { type PixelState } from "./pixel-desk";
-import { Px, Emo, StateIcon, type PxName } from "./pixel-icon";
+import { Px, Emo, PxText, StateIcon, type PxName } from "./pixel-icon";
 import { HandoverLayer, useHandoverDetector, type Handover } from "./handover";
 import NewProject from "./new-project";
 
@@ -39,7 +39,7 @@ function Presence({ name, at }: { name: string; at?: string }) {
 
 function DueChip({ t }: { t: TaskView }) {
   if (!t.dueText) return null;
-  return <span className={`due ${t.dueFlag ?? "ok"}`}>{t.dueFlag === "late" ? <><Px name="dot-late" /> </> : t.dueFlag === "risk" ? <><Px name="dot-risk" /> </> : t.dueFlag === "done" ? "✓ " : ""}{t.dueText}</span>;
+  return <span className={`due ${t.dueFlag ?? "ok"}`}>{t.dueFlag === "late" ? <><Px name="dot-late" /> </> : t.dueFlag === "risk" ? <><Px name="dot-risk" /> </> : t.dueFlag === "done" ? <><Px name="check" /> </> : ""}{t.dueText}</span>;
 }
 
 const pillOf = (s: string) => (s === "in_review" ? "review" : s === "in_progress" ? "doing" : "queued");
@@ -47,7 +47,7 @@ const pillOf = (s: string) => (s === "in_review" ? "review" : s === "in_progress
 function TaskRow({ t, onOpen, showWho }: { t: TaskView; onOpen: (id: string) => void; showWho?: boolean }) {
   return (
     <button className="tasklink" onClick={() => onOpen(t.id)}>
-      <span className="t">{t.title}{showWho && t.assignee ? <small>{t.assignee}</small> : null}</span>
+      <span className="t"><PxText text={t.title} />{showWho && t.assignee ? <small>{t.assignee}</small> : null}</span>
       <span className="meta"><span className={`pill p-${pillOf(t.status)}`}>{t.statusLabel}</span><DueChip t={t} /></span>
     </button>
   );
@@ -125,7 +125,7 @@ function AttnRow({ t, onOpen }: { t: TaskView; onOpen: () => void }) {
   return (
     <li>
       <button className="ar" onClick={onOpen}>
-        <b>{t.title}</b>
+        <b><PxText text={t.title} /></b>
         <small>{t.assignee ?? "Unassigned"}{t.dueText ? ` · ${t.dueText}` : ""}{t.project ? ` · ${t.project}` : ""}</small>
       </button>
     </li>
@@ -303,7 +303,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
                 <div className="desks">{office.idleDesks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} walking={walkingIds.has(d.agentId)} />)}</div>
               </section>
             )}
-            <button className="newroom" onClick={() => setNewProject(true)}>＋ New project<small>adds a new room to the office</small></button>
+            <button className="newroom" onClick={() => setNewProject(true)}><Px name="plus" /> New project<small>adds a new room to the office</small></button>
           </div>
         </section>
 
@@ -336,12 +336,12 @@ export default function OfficeView({ office, attention, people, seen }: { office
                     <button className="ar" onClick={() => f.issueId && setOpenTask(f.issueId, f.ws)}>
                       <b>{f.issueTitle ?? "Untitled task"}</b><small>{f.agent} · {f.error} · {f.when}</small>
                     </button>
-                    {f.issueId && <button className="btn sm" disabled={rerunning === f.id} onClick={() => rerun(f)}>{rerunning === f.id ? "…" : "↻ Retry"}</button>}
+                    {f.issueId && <button className="btn sm" disabled={rerunning === f.id} onClick={() => rerun(f)}>{rerunning === f.id ? "…" : <><Px name="refresh" /> Retry</>}</button>}
                   </li>
                 ))}
               </AttnGroup>
             )}
-            {total > 0 && cleared.length > 0 && <p className="clearline">✓ {cleared.join(" · ")}</p>}
+            {total > 0 && cleared.length > 0 && <p className="clearline"><Px name="check" /> {cleared.join(" · ")}</p>}
           </div>
         </aside>
       </main>
@@ -353,7 +353,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
           <div className="dhead">
             <span className={`st-${openDesk.state}`}><Avatar d={openDesk} /></span>
             <div className="meta"><h2>{openDesk.name}</h2><div className="role">{openDesk.runtime}</div></div>
-            <button className="x" onClick={closeAll} aria-label="Close">✕</button>
+            <button className="x" onClick={closeAll} aria-label="Close"><Px name="close" size="1em" /></button>
           </div>
           <div className="dbody">
             <div className="note"><span><StateIcon state={openDesk.state} />{openDesk.bubble}</span></div>
@@ -361,7 +361,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
               <NewTaskForm ws={office.workspaceId} desk={openDesk} projects={office.projects} initialDetail={draft} onDone={id => { setAdding(false); setDraft(""); refresh(); if (id) setOpenTask(id); }} />
             ) : (
               <div className="chiprow">
-                <button className="btn primary" onClick={() => { setDraft(""); setAdding(true); }}>+ New task</button>
+                <button className="btn primary" onClick={() => { setDraft(""); setAdding(true); }}><Px name="plus" size="0.9em" /> New task</button>
               </div>
             )}
             <div>
@@ -386,7 +386,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
           <div className="dhead">
             <span className="avatar">{openHuman.slice(0, 1).toUpperCase()}</span>
             <div className="meta"><h2>{openHuman}&apos;s desk</h2><div className="role">{office.workspace}</div></div>
-            <button className="x" onClick={closeAll} aria-label="Close">✕</button>
+            <button className="x" onClick={closeAll} aria-label="Close"><Px name="close" size="1em" /></button>
           </div>
           <div className="dbody">
             <div>
