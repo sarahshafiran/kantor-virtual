@@ -170,5 +170,9 @@ Otherwise it shows when they were last seen.
   - `npm run typecheck`: TypeScript check.
   - `npm run penjaga:uji`: dry run of the office watchdog, which resumes paused tasks and sends Telegram reminders.
 - **Other files:**
-  - `.github/workflows/penjaga.yml`: optional scheduled watchdog for the original install. It needs repository secrets.
-  - `setup/`: notes from the original install, in Indonesian.
+  - `.github/workflows/penjaga.yml`: optional scheduled watchdog that runs on GitHub. It needs repository secrets; see `setup/SETUP-TELEGRAM.md`.
+  - `data/judul.json` (optional, not committed): friendlier titles for your own issues, as `{ "issue-id": "Title" }`. See `data/judul.example.json`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

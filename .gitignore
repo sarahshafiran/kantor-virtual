@@ -5,3 +5,8 @@ node_modules/
 next-env.d.ts
 *.tsbuildinfo
 .DS_Store
+
+# Personal: friendly task titles for your own workspace (see data/judul.example.json)
+data/judul.json
+# Personal notes that stay on this computer
+notes/

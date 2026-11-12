@@ -1,4 +1,4 @@
-// Cari chat id Sarah & Dan setelah mereka mengirim /start ke bot.
+// Find the Telegram chat id of everyone who has sent /start to the bot.
 // Pakai: isi TELEGRAM_BOT_TOKEN di file .env.local, lalu jalankan:  npm run telegram:cek
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) { console.log("Isi dulu TELEGRAM_BOT_TOKEN di file .env.local (token dari @BotFather)."); process.exit(1); }

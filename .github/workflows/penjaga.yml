@@ -20,4 +20,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHATS: ${{ secrets.TELEGRAM_CHATS }}
           TELEGRAM_BOTS: ${{ secrets.TELEGRAM_BOTS }}
-          KANTOR_TIMEZONE: Asia/Jakarta
+          KANTOR_TIMEZONE: ${{ vars.KANTOR_TIMEZONE || 'Asia/Jakarta' }}
+          # Self-hosted Multica? Add repository variables MULTICA_API_URL and MULTICA_APP_URL.
+          MULTICA_API_URL: ${{ vars.MULTICA_API_URL || 'https://api.multica.ai' }}
+          MULTICA_APP_URL: ${{ vars.MULTICA_APP_URL || 'https://multica.ai' }}
