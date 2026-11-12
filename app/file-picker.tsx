@@ -1,5 +1,6 @@
 "use client";
 import { useRef } from "react";
+import { Px } from "./pixel-icon";
 
 const MAX_MB = 25;
 
@@ -27,11 +28,11 @@ export default function FilePicker({ files, onChange }: { files: File[]; onChang
   return (
     <div className="picker">
       <input ref={input} id="lampiran" type="file" multiple hidden onChange={e => { add(e.target.files); e.target.value = ""; }} />
-      <button type="button" className="btn sm" onClick={() => input.current?.click()}>📎 Lampirkan file</button>
+      <button type="button" className="btn sm" onClick={() => input.current?.click()}><Px name="clip" /> Attach file</button>
       {files.map((f, i) => (
         <span key={f.name + i} className="chip">
-          {f.type.startsWith("image/") ? "🖼️" : "📄"} {f.name}
-          <button type="button" className="chipx" aria-label={`Hapus ${f.name}`} onClick={() => onChange(files.filter((_, j) => j !== i))}>✕</button>
+          <Px name={f.type.startsWith("image/") ? "image" : "file"} /> {f.name}
+          <button type="button" className="chipx" aria-label={`Remove ${f.name}`} onClick={() => onChange(files.filter((_, j) => j !== i))}>✕</button>
         </span>
       ))}
     </div>
@@ -40,5 +41,5 @@ export default function FilePicker({ files, onChange }: { files: File[]; onChang
 
 function alertLarge() {
   // Tidak memakai alert() bawaan; cukup pesan di konsol dan file besar dilewati.
-  console.warn(`File lebih dari ${MAX_MB} MB dilewati.`);
+  console.warn(`Files over ${MAX_MB} MB were skipped.`);
 }

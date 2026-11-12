@@ -2,16 +2,17 @@
 // Pilih tema warna (Ceria, Laut, Hutan, Pastel, Klasik) dan mode tampilan (Otomatis/Terang/Gelap).
 // Disimpan di browser masing-masing, jadi tiap orang bisa punya tampilan sendiri.
 import { useEffect, useRef, useState } from "react";
+import { Px, type PxName } from "./pixel-icon";
 
 type Mode = "auto" | "light" | "dark";
 export const PALETTES = [
-  { id: "ceria", name: "Ceria", dots: ["#FF69B4", "#FFEA00", "#00D9C0", "#FF6B35", "#A259FF"] },
-  { id: "laut", name: "Laut", dots: ["#2F80ED", "#FFD23F", "#00B8D9", "#FF7A59", "#5B5BD6"] },
-  { id: "hutan", name: "Hutan", dots: ["#3E9B5F", "#F2C14E", "#4FB3A9", "#E07A3F", "#8C6BB1"] },
+  { id: "ceria", name: "Candy", dots: ["#FF69B4", "#FFEA00", "#00D9C0", "#FF6B35", "#A259FF"] },
+  { id: "laut", name: "Ocean", dots: ["#2F80ED", "#FFD23F", "#00B8D9", "#FF7A59", "#5B5BD6"] },
+  { id: "hutan", name: "Forest", dots: ["#3E9B5F", "#F2C14E", "#4FB3A9", "#E07A3F", "#8C6BB1"] },
   { id: "pastel", name: "Pastel", dots: ["#F4A6C6", "#FFE38A", "#9EDFD3", "#FFB38A", "#C3B1F5"] },
-  { id: "klasik", name: "Klasik", dots: ["#C2683F", "#E8B04A", "#5E9C8F", "#D9822B", "#8A6F9E"] },
+  { id: "klasik", name: "Classic", dots: ["#C2683F", "#E8B04A", "#5E9C8F", "#D9822B", "#8A6F9E"] },
 ] as const;
-const MODES: { id: Mode; label: string }[] = [{ id: "auto", label: "🖥️ Otomatis" }, { id: "light", label: "☀️ Terang" }, { id: "dark", label: "🌙 Gelap" }];
+const MODES: { id: Mode; icon: PxName; label: string }[] = [{ id: "auto", icon: "monitor", label: "Auto" }, { id: "light", icon: "sun", label: "Light" }, { id: "dark", icon: "moon", label: "Dark" }];
 
 const store = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch {} };
 
@@ -51,13 +52,13 @@ export default function ThemeToggle() {
 
   return (
     <div className="themepick" ref={box}>
-      <button className="btn sm" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-haspopup="dialog" title="Ganti tema warna dan mode terang/gelap">
-        🎨 Tema: {cur.name} {MODES.find(m => m.id === mode)!.label.split(" ")[0]}
+      <button className="btn sm" onClick={() => setOpen(o => !o)} aria-expanded={open} aria-haspopup="dialog" title="Change colour theme and light/dark mode">
+        <Px name="palette" /> Theme: {cur.name} <Px name={MODES.find(m => m.id === mode)!.icon} />
       </button>
       {open && (
-        <div className="tp-pop" role="dialog" aria-label="Pilih tema">
-          <div className="tp-h">Tema warna</div>
-          <small className="tp-note">Ganti warna kantor sesuai seleramu.</small>
+        <div className="tp-pop" role="dialog" aria-label="Pick a theme">
+          <div className="tp-h">Colour theme</div>
+          <small className="tp-note">Pick the office colours you like.</small>
           <div className="tp-pals">
             {PALETTES.map(p => (
               <button key={p.id} className={`tp-pal ${p.id === pal ? "on" : ""}`} onClick={() => pickPal(p.id)} aria-pressed={p.id === pal}>
@@ -67,9 +68,9 @@ export default function ThemeToggle() {
           </div>
           <div className="tp-h">Mode</div>
           <div className="tp-modes">
-            {MODES.map(m => <button key={m.id} className={`tp-mode ${m.id === mode ? "on" : ""}`} onClick={() => pickMode(m.id)} aria-pressed={m.id === mode}>{m.label}</button>)}
+            {MODES.map(m => <button key={m.id} className={`tp-mode ${m.id === mode ? "on" : ""}`} onClick={() => pickMode(m.id)} aria-pressed={m.id === mode}><Px name={m.icon} /> {m.label}</button>)}
           </div>
-          <small className="tp-note">Tersimpan di browser ini saja, jadi tiap orang bisa punya tampilan sendiri.</small>
+          <small className="tp-note">Saved in this browser only, so everyone can have their own look.</small>
         </div>
       )}
     </div>

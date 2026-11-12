@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Px, type PxName } from "./pixel-icon";
 
 type F = { id: string; name: string; url: string };
 type Kind = "image" | "pdf" | "html" | "table" | "doc" | "text" | "other";
@@ -17,8 +18,8 @@ export function kindOf(name: string): Kind {
   if (["txt", "json", "log", "yaml", "yml"].includes(e)) return "text";
   return "other";
 }
-const ICON: Record<Kind, string> = { image: "🖼️", pdf: "📕", html: "🌐", table: "📊", doc: "📝", text: "📄", other: "📎" };
-const LABEL: Record<Kind, string> = { image: "Gambar", pdf: "PDF", html: "Halaman web", table: "Tabel", doc: "Dokumen", text: "Teks", other: "File" };
+export const ICON: Record<Kind, PxName> = { image: "image", pdf: "pdf", html: "web", table: "chart", doc: "file", text: "file", other: "clip" };
+const LABEL: Record<Kind, string> = { image: "Image", pdf: "PDF", html: "Web page", table: "Table", doc: "Document", text: "Text", other: "File" };
 
 function parseTable(text: string, sep: string): string[][] {
   const rows: string[][] = []; let row: string[] = []; let cell = ""; let q = false;
@@ -45,8 +46,8 @@ function Body({ f, kind, tall }: { f: F; kind: Kind; tall?: boolean }) {
   const h = tall ? "75vh" : 360;
   if (kind === "image") return <img src={f.url} alt={f.name} className="pv-img" />;
   if (kind === "pdf") return <iframe title={f.name} src={f.url} className="pv-frame" style={{ height: h }} />;
-  if (err) return <p className="desc">Pratinjau tidak tersedia ({err.slice(0, 80)}). Unduh file-nya untuk membuka.</p>;
-  if (needsText && text === null) return <div className="loading"><span className="spinner sm" /> Memuat pratinjau…</div>;
+  if (err) return <p className="desc">Preview unavailable ({err.slice(0, 80)}). Download the file to open it.</p>;
+  if (needsText && text === null) return <div className="loading"><span className="spinner sm" /> Loading preview…</div>;
   if (kind === "html") return <iframe title={f.name} srcDoc={text!} sandbox="allow-scripts" className="pv-frame" style={{ height: h, background: "#fff" }} />;
   if (kind === "table") {
     const rows = parseTable(text!, ext(f.name) === "tsv" ? "\t" : ",");
@@ -55,13 +56,13 @@ function Body({ f, kind, tall }: { f: F; kind: Kind; tall?: boolean }) {
       <div className="pv-table" style={{ maxHeight: h }}>
         <table><thead><tr>{head?.map((c, i) => <th key={i}>{c}</th>)}</tr></thead>
           <tbody>{rest.slice(0, 300).map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>)}</tbody></table>
-        {rest.length > 300 && <p className="desc">Menampilkan 300 dari {rest.length} baris.</p>}
+        {rest.length > 300 && <p className="desc">Showing 300 of {rest.length} rows.</p>}
       </div>
     );
   }
   if (kind === "doc") return <div className="md pv-doc" style={{ maxHeight: h }}><ReactMarkdown remarkPlugins={[remarkGfm]}>{text!}</ReactMarkdown></div>;
   if (kind === "text") return <pre className="pv-text" style={{ maxHeight: h }}>{text}</pre>;
-  return <p className="desc">File ini belum bisa dipratinjau di sini. Unduh untuk membukanya.</p>;
+  return <p className="desc">This file can't be previewed here. Download it to open.</p>;
 }
 
 /** Kartu lampiran dengan pratinjau seperti di Claude: halaman web, tabel, dokumen, gambar, PDF. */
@@ -72,11 +73,11 @@ export default function FilePreview({ f }: { f: F }) {
   return (
     <div className="pv">
       <div className="pv-head">
-        <span className="pv-name">{ICON[kind]} {f.name} <small>{LABEL[kind]}</small></span>
+        <span className="pv-name"><Px name={ICON[kind]} /> {f.name} <small>{LABEL[kind]}</small></span>
         <span className="pv-actions">
-          {kind !== "other" && <button className="btn sm" onClick={() => setOpen(!open)}>{open ? "Tutup" : "Lihat"}</button>}
-          {kind !== "other" && <button className="btn sm" onClick={() => setFull(true)}>⤢ Besar</button>}
-          <a className="btn sm" href={f.url} download={f.name}>Unduh</a>
+          {kind !== "other" && <button className="btn sm" onClick={() => setOpen(!open)}>{open ? "Hide" : "View"}</button>}
+          {kind !== "other" && <button className="btn sm" onClick={() => setFull(true)}>⤢ Expand</button>}
+          <a className="btn sm" href={f.url} download={f.name}>Download</a>
         </span>
       </div>
       {open && <div className="pv-body"><Body f={f} kind={kind} /></div>}
@@ -84,7 +85,7 @@ export default function FilePreview({ f }: { f: F }) {
         <>
           <div className="scrim" style={{ zIndex: 40 }} onClick={() => setFull(false)} />
           <div className="modal pv-modal" role="dialog" aria-modal="true" aria-label={f.name} style={{ zIndex: 41 }}>
-            <div className="pv-head"><b>{ICON[kind]} {f.name}</b><button className="x" onClick={() => setFull(false)} aria-label="Tutup">✕</button></div>
+            <div className="pv-head"><b><Px name={ICON[kind]} /> {f.name}</b><button className="x" onClick={() => setFull(false)} aria-label="Close">✕</button></div>
             <Body f={f} kind={kind} tall />
           </div>
         </>

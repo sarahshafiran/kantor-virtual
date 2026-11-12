@@ -26,13 +26,14 @@ export type Office = {
   people: string[];
   agentsDetail: Record<string, { runs: RunView[]; tasks: TaskView[] }>;
   projects: { id: string; name: string }[];
+  members: { id: string; name: string }[];
 };
 
 const CLOSED = new Set(["done", "cancelled", "canceled", "completed", "duplicate"]);
 const isClosed = (i: Issue) => CLOSED.has(i.status) || CLOSED.has(String(i.status_category || ""));
 const ACTIVE_RUN = new Set(["queued", "dispatched", "running", "in_progress", "preparing", "started"]);
 const STATUS_LABEL: Record<string, string> = {
-  backlog: "Backlog", todo: "Siap dikerjakan", in_progress: "Dikerjakan", in_review: "Perlu review", done: "Selesai", cancelled: "Batal",
+  backlog: "Backlog", todo: "Ready", in_progress: "In progress", in_review: "Needs review", done: "Done", cancelled: "Cancelled",
 };
 
 function todayIn(tz: string, offsetDays = 0) {
@@ -40,24 +41,24 @@ function todayIn(tz: string, offsetDays = 0) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
-const fmtDate = (s: string) => new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short" }).format(new Date(s + "T00:00:00"));
+const fmtDate = (s: string) => new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(new Date(s + "T00:00:00"));
 
 function relTime(iso: string, tz: string) {
   const mins = Math.round((Date.now() - Date.parse(iso)) / 60000);
-  if (mins < 1) return "baru saja";
-  if (mins < 60) return `${mins} mnt lalu`;
-  if (mins < 60 * 24) return `${Math.round(mins / 60)} jam lalu`;
-  return new Intl.DateTimeFormat("id-ID", { timeZone: tz, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60 * 24) return `${Math.round(mins / 60)}h ago`;
+  return new Intl.DateTimeFormat("en-GB", { timeZone: tz, day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 }
 
 const emojiOf = (a: Agent) => (a.avatar_url?.startsWith("emoji:") ? a.avatar_url.slice(6) : null);
 const imgOf = (a: Agent) => (a.avatar_url && /^https?:/.test(a.avatar_url) ? a.avatar_url : null);
 
 function shortError(e: string | null) {
-  if (!e) return "alasan tidak diketahui";
-  if (/oauth|authenticat|login/i.test(e)) return "login Claude/GPT di laptop kedaluwarsa";
-  if (/rate|limit|quota|usage/i.test(e)) { const m = e.match(/resets?\s+([^()]+?)\s*(\(|$)/i); return `kuota AI habis${m ? ` · reset ${m[1].trim()}` : ""} · dilanjutkan otomatis`; }
-  if (/offline|heartbeat/i.test(e)) return "laptop mati saat bekerja";
+  if (!e) return "unknown reason";
+  if (/oauth|authenticat|login/i.test(e)) return "Claude/GPT login on the laptop expired";
+  if (/rate|limit|quota|usage/i.test(e)) { const m = e.match(/resets?\s+([^()]+?)\s*(\(|$)/i); return `AI quota used up${m ? ` · resets ${m[1].trim()}` : ""} · resumes automatically`; }
+  if (/offline|heartbeat/i.test(e)) return "laptop went off mid-task";
   return e.length > 60 ? e.slice(0, 57) + "…" : e;
 }
 
@@ -69,7 +70,7 @@ function loginAlerts(s: Snapshot): string[] {
     if (last?.status === "failed" && /oauth|authenticat|login/i.test(last.error ?? "")) {
       const who = rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "ChatGPT (Codex)" : rt.provider;
       const cmd = rt.provider === "claude" ? "claude auth login" : rt.provider === "codex" ? "codex login" : "";
-      out.push(`Login ${who} di laptop ini kedaluwarsa, jadi worker ${who} tidak bisa bekerja.${cmd ? ` Perbaiki: buka aplikasi Terminal, ketik  ${cmd}  lalu ikuti petunjuknya.` : ""} Setelah itu klik "Jalankan ulang" di daftar Gagal.`);
+      out.push(`The ${who} login on this laptop expired, so ${who} agents can't work.${cmd ? ` To fix it: open Terminal, type  ${cmd}  and follow the steps.` : ""} Then press "Retry" in the Failed list.`);
     }
   }
   return out;
@@ -78,7 +79,7 @@ function loginAlerts(s: Snapshot): string[] {
 export function buildOffice(s: Snapshot): Office {
   const tz = process.env.KANTOR_TIMEZONE || "Asia/Jakarta";
   const today = todayIn(tz);
-  const memberName = (id: string | null) => s.members.find(m => m.id === id || m.user_id === id)?.name ?? "Anggota";
+  const memberName = (id: string | null) => s.members.find(m => m.id === id || m.user_id === id)?.name ?? "Member";
   const agentById = new Map(s.agents.map(a => [a.id, a]));
   const issueById = new Map(s.issues.map(i => [i.id, i]));
   const projectById = new Map(s.projects.map(p => [p.id, p]));
@@ -109,20 +110,20 @@ export function buildOffice(s: Snapshot): Office {
       const d = daysBetween(today, i.due_date);
       const notStarted = i.status === "backlog" || i.status === "todo";
       const finished = workerFinished(i);
-      if (finished && d < 0) { dueFlag = "done"; dueText = `Selesai, telat ${-d} hari` + (i.status === "in_review" ? " · menunggu review" : ""); }
-      else if (finished && d <= 2) dueText = `${fmtDate(i.due_date)} · sudah dikerjakan` + (i.status === "in_review" ? ", menunggu review" : "");
-      else if (d < 0) { dueFlag = "late"; dueText = `Telat ${-d} hari`; }
+      if (finished && d < 0) { dueFlag = "done"; dueText = `Done, ${-d}d late` + (i.status === "in_review" ? " · awaiting review" : ""); }
+      else if (finished && d <= 2) dueText = `${fmtDate(i.due_date)} · done` + (i.status === "in_review" ? ", awaiting review" : "");
+      else if (d < 0) { dueFlag = "late"; dueText = `${-d}d late`; }
       else if (d <= 2) {
         dueFlag = "risk";
-        dueText = (d === 0 ? "Jatuh tempo hari ini" : d === 1 ? "Jatuh tempo besok" : `Jatuh tempo ${fmtDate(i.due_date)}`) +
-          (i.status === "in_review" ? " · menunggu review" : i.assignee_type === "member" ? " · menunggu manusia" : notStarted ? " · belum mulai" : "");
+        dueText = (d === 0 ? "Due today" : d === 1 ? "Due tomorrow" : `Due ${fmtDate(i.due_date)}`) +
+          (i.status === "in_review" ? " · awaiting review" : i.assignee_type === "member" ? " · waiting on a person" : notStarted ? " · not started" : "");
       } else dueText = fmtDate(i.due_date);
     }
-    const assignee = i.assignee_type === "agent" ? agentById.get(i.assignee_id || "")?.name ?? "Agen"
+    const assignee = i.assignee_type === "agent" ? agentById.get(i.assignee_id || "")?.name ?? "Agent"
       : i.assignee_type === "member" ? memberName(i.assignee_id) : null;
     return {
       id: i.id, key: i.identifier, title: friendlyTitle(i), status: i.status,
-      statusLabel: i.status === "backlog" && (i.metadata ?? {}).kantor_parked ? "Menunggu kantor buka" : i.status_name || STATUS_LABEL[i.status] || i.status,
+      statusLabel: i.status === "backlog" && (i.metadata ?? {}).kantor_parked ? "Waiting for office to open" : i.status_name || STATUS_LABEL[i.status] || i.status,
       due: i.due_date, dueFlag, dueText, url: url(i), ws: s.workspace.id, wsName: s.workspace.name, assignee, assigneeType: i.assignee_type,
       project: i.project_id ? projectById.get(i.project_id)?.title ?? null : null,
     };
@@ -130,7 +131,7 @@ export function buildOffice(s: Snapshot): Office {
 
   const runView = (r: Run): RunView => {
     const iss = r.issue_id ? issueById.get(r.issue_id) : undefined;
-    return { id: r.id, ws: s.workspace.id, agent: agentById.get(r.agent_id)?.name ?? "Agen", status: r.status, when: relTime(r.completed_at || r.started_at || r.created_at, tz),
+    return { id: r.id, ws: s.workspace.id, agent: agentById.get(r.agent_id)?.name ?? "Agent", status: r.status, when: relTime(r.completed_at || r.started_at || r.created_at, tz),
       error: r.status === "failed" ? shortError(r.error) : null, issueTitle: iss ? friendlyTitle(iss) : null, issueId: iss?.id ?? null, url: iss ? url(iss) : null };
   };
 
@@ -151,26 +152,26 @@ export function buildOffice(s: Snapshot): Office {
     const ready = mine.filter(i => (i.status === "todo" || i.status === "in_progress") && !workerFinished(i));
     let state: DeskState, bubble: string;
     const parkedMine = mine.filter(i => (i.metadata ?? {}).kantor_parked).length;
-    if (!switchOpen && !active) { state = "closed"; bubble = parkedMine ? `🔒 Kantor tutup · ${parkedMine} task menunggu` : "🔒 Kantor tutup"; }
-    else if (!online) { state = "off"; bubble = "🌙 Laptop mati · lanjut saat menyala"; }
+    if (!switchOpen && !active) { state = "closed"; bubble = parkedMine ? `Office closed · ${parkedMine} waiting` : "Office closed"; }
+    else if (!online) { state = "off"; bubble = "Laptop off · resumes when on"; }
     else if (!active && quota.has(a.runtime_id)) {
       const q = quota.get(a.runtime_id)!;
       const past = q.resetAt && Date.parse(q.resetAt) <= Date.now();
       state = "break";
-      bubble = q.resetAt ? (past ? "☕ Kuota pulih · segera lanjut otomatis" : `☕ Istirahat · kuota reset ${fmtTime(new Date(q.resetAt))}`) : "☕ Istirahat · kuota AI habis";
+      bubble = q.resetAt ? (past ? "Quota back · resuming soon" : `On a break · quota resets ${fmtTime(new Date(q.resetAt))}`) : "On a break · AI quota used up";
     }
-    else if (active) { state = "working"; const ai = issueById.get(active.issue_id || ""); bubble = "Mengerjakan: " + (ai ? friendlyTitle(ai) : "tugas"); }
-    else if (last?.status === "failed" && Date.now() - Date.parse(last.created_at) < 86400000 * 3) { state = "failed"; bubble = "⚠️ Gagal: " + shortError(last.error); }
-    else if (review.length) { state = "review"; bubble = `Menunggu review-mu (${review.length})`; }
-    else if (ready.length) { state = "ready"; bubble = `Siap mengerjakan ${ready.length} task`; }
+    else if (active) { state = "working"; const ai = issueById.get(active.issue_id || ""); bubble = "Working on: " + (ai ? friendlyTitle(ai) : "a task"); }
+    else if (last?.status === "failed" && Date.now() - Date.parse(last.created_at) < 86400000 * 3) { state = "failed"; bubble = "Failed: " + shortError(last.error); }
+    else if (review.length) { state = "review"; bubble = `Waiting for your review (${review.length})`; }
+    else if (ready.length) { state = "ready"; bubble = `Ready for ${ready.length} task${ready.length > 1 ? "s" : ""}`; }
     else {
       state = "home";
       const backlog = mine.filter(i => i.status === "backlog").length;
-      bubble = backlog ? `🏠 Pulang · ${backlog} backlog belum dimulai` : "🏠 Pulang · tidak ada task";
+      bubble = backlog ? `Off duty · ${backlog} in backlog` : "Off duty · no tasks";
     }
     return {
       agentId: a.id, name: a.name, emoji: emojiOf(a), avatar: imgOf(a), description: a.description || "",
-      runtime: rt ? `${rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "GPT (Codex)" : rt.provider}${s.runtimes.filter(x => x.provider === rt.provider).length > 1 ? " · " + (s.members.find(m => m.user_id === rt.owner_id || m.id === rt.owner_id)?.name.split(/\s+/)[0] ?? "") : ""}${a.model ? " · " + a.model : ""}${s.moved?.[a.id]?.to === a.runtime_id ? " · sementara 🔁" : ""}` : "Tanpa runtime",
+      runtime: rt ? `${rt.provider === "claude" ? "Claude" : rt.provider === "codex" ? "GPT (Codex)" : rt.provider}${s.runtimes.filter(x => x.provider === rt.provider).length > 1 ? " · " + (s.members.find(m => m.user_id === rt.owner_id || m.id === rt.owner_id)?.name.split(/\s+/)[0] ?? "") : ""}${a.model ? " · " + a.model : ""}${s.moved?.[a.id]?.to === a.runtime_id ? " · temporary 🔁" : ""}` : "No engine",
       state, bubble,
     };
   };
@@ -193,7 +194,7 @@ export function buildOffice(s: Snapshot): Office {
     const ids = [...new Set(inRoom.map(i => i.assignee_id!))].filter(id => agentById.has(id));
     return {
       id: p.id, name: p.title, icon: p.icon,
-      progress: p.issue_count ? `${p.done_count}/${p.issue_count} selesai` + (p.due_date ? ` · target ${fmtDate(p.due_date)}` : "") : null,
+      progress: p.issue_count ? `${p.done_count}/${p.issue_count} done` + (p.due_date ? ` · due ${fmtDate(p.due_date)}` : "") : null,
       desks: ids.map(id => makeDesk(agentById.get(id)!, inRoom.filter(i => i.assignee_id === id)))
         .sort((a, b) => a.name.localeCompare(b.name)),
     };
@@ -220,8 +221,8 @@ export function buildOffice(s: Snapshot): Office {
 
   return {
     workspace: s.workspace.name, workspaceId: s.workspace.id, workspaceSlug: s.workspace.slug,
-    today: new Intl.DateTimeFormat("id-ID", { timeZone: tz, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()),
-    updatedAt: new Intl.DateTimeFormat("id-ID", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date()),
+    today: new Intl.DateTimeFormat("en-GB", { timeZone: tz, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(new Date()),
+    updatedAt: new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(new Date()),
     open: s.runtimes.some(r => r.status === "online"),
     switchOpen, parked: s.issues.filter(i => (i.metadata ?? {}).kantor_parked && i.status === "backlog").length,
     changedBy: s.kantor.changedBy ?? null,
@@ -245,6 +246,7 @@ export function buildOffice(s: Snapshot): Office {
     },
     people: [...new Set(s.members.map(m => m.name))],
     projects: s.projects.map(p => ({ id: p.id, name: p.title })),
+    members: s.members.map(m => ({ id: m.user_id, name: m.name })),
     agentsDetail,
   };
 }

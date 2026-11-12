@@ -11,7 +11,7 @@ export type Agent = {
 /** Worker yang sementara dipindah ke mesin AI lain karena kuota mesin aslinya habis. */
 export type Moved = Record<string, { from: string; to: string; at: string; resetAt: string | null; model: string; thinking: string }>;
 export type Project = { id: string; title: string; icon: string | null; status: string; due_date: string | null; issue_count: number; done_count: number };
-export type Runtime = { id: string; name: string; provider: string; status: string; last_seen_at: string; owner_id: string };
+export type Runtime = { id: string; name: string; provider: string; status: string; last_seen_at: string; owner_id: string; visibility?: string; shared_with?: unknown[] };
 export type Issue = {
   id: string; identifier: string; title: string; status: string; status_category?: string; status_name?: string;
   priority: string; due_date: string | null; start_date: string | null; project_id: string | null;
@@ -44,7 +44,7 @@ function token(): string {
       }
     }
   }
-  throw new Error("Belum login Multica di laptop ini. Buka Multica Desktop dan login dulu, lalu muat ulang halaman.");
+  throw new Error("Not signed in to Multica on this laptop. Open Multica Desktop, sign in, then reload the page.");
 }
 
 async function call<T>(method: string, path: string, workspaceId?: string, body?: unknown): Promise<T> {
@@ -67,7 +67,7 @@ let wsList: { at: number; data: Workspace[] } | null = null;
 export async function workspaces(): Promise<Workspace[]> {
   if (wsList && Date.now() - wsList.at < 60_000) return wsList.data;
   const wss = list<Workspace>(await get("/api/workspaces"), "workspaces");
-  if (!wss.length) throw new Error("Akun ini belum punya workspace Multica.");
+  if (!wss.length) throw new Error("This account has no Multica workspace yet.");
   wsList = { at: Date.now(), data: wss };
   return wss;
 }
@@ -113,7 +113,7 @@ export async function uploadFile(wsPick: string | null | undefined, file: File, 
   form.append("file", file, file.name);
   if (issueId) form.append("issue_id", issueId);
   const res = await fetch(API + "/api/upload-file", { method: "POST", headers: { Authorization: `Bearer ${token()}`, "X-Workspace-ID": ws.id }, body: form });
-  if (!res.ok) throw new Error(`Unggah ${file.name} gagal (${res.status}) ${(await res.text().catch(() => "")).slice(0, 150)}`);
+  if (!res.ok) throw new Error(`Uploading ${file.name} failed (${res.status}) ${(await res.text().catch(() => "")).slice(0, 150)}`);
   return res.json() as Promise<{ id: string; filename: string; url: string }>;
 }
 
@@ -144,6 +144,65 @@ export async function createIssue(wsPick: string | null | undefined, body: Recor
 }
 export async function me() { return get<{ id: string; name: string }>("/api/me"); }
 
+// ---- Kabar masuk (inbox Multica milik pemilik token) ----
+export type InboxItem = {
+  id: string; type: string; severity?: string; issue_id: string | null; title: string; body: string | null;
+  read: boolean; archived?: boolean; created_at: string; actor_type?: string | null; actor_id?: string | null;
+};
+export async function inbox(wsPick?: string | null) {
+  const ws = await workspace(wsPick);
+  return get<unknown>("/api/inbox", ws.id).then(d => list<InboxItem>(d, "items"));
+}
+export async function inboxUnread(wsPick?: string | null) {
+  const ws = await workspace(wsPick);
+  return get<{ count: number }>("/api/inbox/unread-count", ws.id).then(d => d?.count ?? 0).catch(() => 0);
+}
+export async function markInboxRead(wsPick: string | null | undefined, id: string) {
+  const ws = await workspace(wsPick);
+  return call("POST", `/api/inbox/${id}/read`, ws.id, {});
+}
+export async function markAllInboxRead(wsPick?: string | null) {
+  const ws = await workspace(wsPick);
+  return call("POST", "/api/inbox/mark-all-read", ws.id, {});
+}
+
+// ---- Anggota & rekrutmen ----
+export type Invitation = { id: string; invitee_email: string; role: string; status?: string; created_at: string; expires_at?: string };
+export async function invitations(wsPick?: string | null) {
+  const ws = await workspace(wsPick);
+  return get<unknown>(`/api/workspaces/${ws.id}/invitations`, ws.id).then(d => list<Invitation>(d, "invitations")).catch(() => [] as Invitation[]);
+}
+/** Undang manusia lewat email. Multica mengirim email undangan; dia jadi anggota setelah menerima. */
+export async function inviteMember(wsPick: string | null | undefined, email: string, role: "member" | "admin" = "member") {
+  const ws = await workspace(wsPick);
+  return call("POST", `/api/workspaces/${ws.id}/members`, ws.id, { email, role });
+}
+export async function createAgent(wsPick: string | null | undefined, body: Record<string, unknown>) {
+  const ws = await workspace(wsPick);
+  return call<Agent>("POST", "/api/agents", ws.id, body);
+}
+/** Create a workspace (a new office). The slug is made from the name; a short suffix is added if it is taken. */
+export async function createWorkspace(name: string, description?: string) {
+  const base = name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "office";
+  let last: unknown = null;
+  for (let i = 0; i < 4; i++) {
+    const slug = i === 0 ? base : `${base}-${Math.random().toString(36).slice(2, 6)}`;
+    try {
+      const ws = await call<Workspace>("POST", "/api/workspaces", undefined, { name: name.trim(), slug, description: description?.trim() || null });
+      wsList = null; // refresh the workspace list on the next request
+      return ws;
+    } catch (e) {
+      last = e;
+      if (!/409|already|exists|taken|duplicate|reserved/i.test(String(e))) throw e;
+    }
+  }
+  throw last;
+}
+export async function createProject(wsPick: string | null | undefined, body: Record<string, unknown>) {
+  const ws = await workspace(wsPick);
+  return call<Project>("POST", "/api/projects", ws.id, body);
+}
+
 const list = <T,>(d: unknown, key: string): T[] =>
   Array.isArray(d) ? (d as T[]) : ((d as Record<string, unknown>)?.[key] as T[]) ?? [];
 
@@ -160,7 +219,7 @@ export async function loadDirectory(wsPick?: string | null) {
   return { workspace: ws, agents, projects, runtimes, members };
 }
 
-async function allIssues(id: string) {
+export async function allIssues(id: string) {
   const issues: Issue[] = [];
   for (let offset = 0; offset < 2000; offset += 200) {
     const page = await get<{ issues: Issue[]; has_more: boolean }>(`/api/issues?limit=200&offset=${offset}`, id);
@@ -174,7 +233,9 @@ export async function loadWorkspace(wsPick?: string | null) {
   const ws = await workspace(wsPick);
   const id = ws.id;
   // Semua permintaan berjalan bersamaan supaya kantor cepat terbuka.
-  const [dir, issues] = await Promise.all([loadDirectory(id), allIssues(id)]);
+  const [dir, everything] = await Promise.all([loadDirectory(id), allIssues(id)]);
+  // Private chats between people are stored as hidden issues; they never show up as work.
+  const issues = everything.filter(i => !(i.metadata ?? {}).kantor_dm && !i.title.startsWith("💬 Chat"));
   const runs = (await Promise.all(
     dir.agents.map(a => get<unknown>(`/api/agents/${a.id}/tasks?limit=20`, id).then(d => list<Run>(d, "tasks")).catch(() => [] as Run[]))
   )).flat();
@@ -267,7 +328,7 @@ export async function markChatRead(wsPick: string | null | undefined, sessionId:
 export async function fileText(wsPick: string | null | undefined, id: string) {
   const ws = await workspace(wsPick);
   const res = await fetch(`${API}/api/attachments/${id}/content`, { headers: { Authorization: `Bearer ${token()}`, "X-Workspace-ID": ws.id }, cache: "no-store" });
-  if (!res.ok) throw new Error(`Tidak bisa membaca file (${res.status})`);
+  if (!res.ok) throw new Error(`Could not read the file (${res.status})`);
   return res.text();
 }
 export async function fileRaw(wsPick: string | null | undefined, id: string) {

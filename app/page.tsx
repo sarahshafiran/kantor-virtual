@@ -1,6 +1,7 @@
 import { loadWorkspace, workspaces } from "@/lib/multica";
 import { buildOffice, type Office } from "@/lib/office";
 import OfficeView from "./office-view";
+import Shell from "./shell";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +20,19 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ w
     // Gedung lain cukup ditandai angka di tombol gedungnya.
     const seen: Record<string, string> = {};
     for (const o of offices) for (const [n, t] of Object.entries(o.seen)) if (current.people.includes(n) && (!seen[n] || t > seen[n])) seen[n] = t;
-    return <OfficeView office={current} buildings={buildings} attention={current.attention} people={current.people} seen={seen} />;
+    const cur = buildings.find(b => b.id === current.workspaceId)!;
+    return (
+      <Shell buildings={buildings} current={cur} section="kantor">
+        <OfficeView office={current} buildings={buildings} attention={current.attention} people={current.people} seen={seen} />
+      </Shell>
+    );
   } catch (e) {
     return (
       <main className="wrap" style={{ paddingBlock: 40 }}>
         <div className="err">
-          <h2>Kantor belum bisa dibuka</h2>
+          <h2>The office couldn't open</h2>
           <p>{e instanceof Error ? e.message : String(e)}</p>
-          <p className="desc">Cek koneksi internet dan login Multica, lalu muat ulang halaman.</p>
+          <p className="desc">Check your internet connection and Multica login, then reload the page.</p>
         </div>
       </main>
     );

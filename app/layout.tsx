@@ -1,12 +1,12 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 
-export const metadata: Metadata = { title: "Kantor Virtual", description: "Kantor visual untuk worker AI di Multica" };
+export const metadata: Metadata = { title: "Virtual Office", description: "A visual office for AI agents on Multica" };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         {/* Pasang mode terang/gelap pilihan sebelum halaman tampil, supaya tidak berkedip. */}
         <script dangerouslySetInnerHTML={{ __html: `try{var d=document.documentElement,t=localStorage.getItem("kantor-theme"),p=localStorage.getItem("kantor-palette");if(t==="light"||t==="dark")d.dataset.theme=t;if(p&&/^(laut|hutan|pastel|klasik)$/.test(p))d.dataset.palette=p}catch(e){}` }} />

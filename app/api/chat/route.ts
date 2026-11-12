@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const b = (await req.json()) as { ws?: string; agentId: string; title?: string; projectId?: string | null };
   try {
-    const s = await createChat(b.ws ?? null, b.agentId, b.title?.trim() || "Obrolan baru", b.projectId);
+    const s = await createChat(b.ws ?? null, b.agentId, b.title?.trim() || "New chat", b.projectId);
     return NextResponse.json({ id: s.id });
   } catch (e) { return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 500 }); }
 }

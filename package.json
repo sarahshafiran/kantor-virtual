@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3456",
     "typecheck": "tsc --noEmit",
+    "agents:format": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/report-format.ts",
     "penjaga": "tsx --conditions=react-server scripts/penjaga.ts",
     "penjaga:uji": "tsx --env-file-if-exists=.env.local --conditions=react-server scripts/penjaga.ts --uji",
     "telegram:cek": "tsx --env-file-if-exists=.env.local scripts/telegram-cek.ts",

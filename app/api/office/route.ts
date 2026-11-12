@@ -7,14 +7,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   const u = new URL(req.url);
   const ws = u.searchParams.get("ws"); const action = u.searchParams.get("action");
-  if (!ws || (action !== "close" && action !== "open")) return NextResponse.json({ error: "Permintaan tidak lengkap." }, { status: 400 });
+  if (!ws || (action !== "close" && action !== "open")) return NextResponse.json({ error: "Incomplete request." }, { status: 400 });
   try { return NextResponse.json(await planOffice(ws, action)); }
   catch (e) { return NextResponse.json({ error: String(e instanceof Error ? e.message : e) }, { status: 500 }); }
 }
 
 export async function POST(req: Request) {
   const b = (await req.json()) as { ws?: string; action?: "close" | "open"; stopRunning?: boolean };
-  if (!b.ws || (b.action !== "close" && b.action !== "open")) return NextResponse.json({ error: "Permintaan tidak lengkap." }, { status: 400 });
+  if (!b.ws || (b.action !== "close" && b.action !== "open")) return NextResponse.json({ error: "Incomplete request." }, { status: 400 });
   try {
     const result = b.action === "close" ? await closeOffice(b.ws, !!b.stopRunning) : await openOffice(b.ws);
     return NextResponse.json({ ok: true, result });

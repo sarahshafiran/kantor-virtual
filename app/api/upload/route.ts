@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const ws = String(form.get("ws") ?? "") || null;
     const issueId = String(form.get("issueId") ?? "") || undefined;
     const files = form.getAll("file").filter((f): f is File => f instanceof File && f.size > 0);
-    if (!files.length) return NextResponse.json({ error: "Tidak ada file." }, { status: 400 });
+    if (!files.length) return NextResponse.json({ error: "No files." }, { status: 400 });
     const uploaded = [];
     for (const f of files) uploaded.push(await uploadFile(ws, f, issueId));
     return NextResponse.json({ files: uploaded.map(u => ({ id: u.id, name: u.filename })) });

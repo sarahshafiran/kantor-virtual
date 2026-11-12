@@ -40,7 +40,7 @@ export function quotaResetAt(error: string, failedAt: Date, fallbackTz = "Asia/J
 }
 
 export const fmtTime = (d: Date, tz = process.env.KANTOR_TIMEZONE || "Asia/Jakarta") =>
-  new Intl.DateTimeFormat("id-ID", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(d);
+  new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(d);
 
 export type QuotaState = { runtimeId: string; provider: string; resetAt: string | null; since: string };
 
