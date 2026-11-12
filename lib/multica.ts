@@ -15,7 +15,7 @@ export type Runtime = { id: string; name: string; provider: string; status: stri
 export type Issue = {
   id: string; identifier: string; title: string; status: string; status_category?: string; status_name?: string;
   priority: string; due_date: string | null; start_date: string | null; project_id: string | null;
-  assignee_type: "agent" | "member" | null; assignee_id: string | null; updated_at: string; last_activity_at: string;
+  assignee_type: "agent" | "member" | null; assignee_id: string | null; updated_at: string; last_activity_at: string; created_at?: string;
   metadata?: Record<string, unknown>;
 };
 export type Run = {
@@ -117,18 +117,56 @@ export async function uploadFile(wsPick: string | null | undefined, file: File, 
   return res.json() as Promise<{ id: string; filename: string; url: string }>;
 }
 
-/** Siapa yang sedang membuka kantor (detak tiap beberapa menit, disimpan di pengaturan workspace). */
+/** Siapa yang sedang membuka kantor (detak tiap 2 menit dari app yang terbuka).
+ *  Disimpan di metadata sebuah task tersembunyi, satu key per orang: semua anggota boleh menulisnya
+ *  (pengaturan workspace hanya boleh diubah owner/admin, jadi detak anggota biasa dulu ditolak diam-diam). */
+export const PRESENCE_TAG = "kantor_presence";
+export const PRESENCE_TITLE = "🟢 Virtual Office · who's in";
+const seenKey = (userId: string) => `kantor_seen_${userId.replace(/[^0-9a-zA-Z]/g, "_")}`;
+const presenceIssueId = new Map<string, string>();
+const isPresence = (i: Issue) => !!(i.metadata ?? {})[PRESENCE_TAG] || i.title === PRESENCE_TITLE;
+/** Task tersembunyi milik Virtual Office (chat antar orang, papan kehadiran): tidak pernah tampil sebagai pekerjaan. */
+export const isHiddenIssue = (i: Issue) => isPresence(i) || !!(i.metadata ?? {}).kantor_dm || i.title.startsWith("💬 Chat");
+
+async function presenceIssue(wsId: string) {
+  const hit = presenceIssueId.get(wsId);
+  if (hit) return hit;
+  const found = (await allIssues(wsId)).filter(isPresence).sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? ""))[0];
+  let id = found?.id;
+  if (!id) {
+    id = (await createIssue(wsId, {
+      title: PRESENCE_TITLE, status: "backlog", priority: "none",
+      description: "Used by Virtual Office to show who has the office open. Please leave it unassigned and in backlog.",
+    })).id;
+    await setIssueMeta(wsId, id, PRESENCE_TAG, "1");
+  }
+  presenceIssueId.set(wsId, id);
+  return id;
+}
+
 export async function heartbeat(wsPick: string | null | undefined, name: string) {
   const ws = await workspace(wsPick);
-  const full = await get<{ settings?: Record<string, unknown> | null }>(`/api/workspaces/${ws.id}`, ws.id);
-  const settings = { ...(full.settings ?? {}) } as Record<string, unknown>;
-  settings.kantor_presence = { ...((settings.kantor_presence as Record<string, string>) ?? {}), [name]: new Date().toISOString() };
-  return call("PATCH", `/api/workspaces/${ws.id}`, ws.id, { settings });
+  const [mine, id] = await Promise.all([me(), presenceIssue(ws.id)]);
+  try { await setIssueMeta(ws.id, id, seenKey(mine.id), `${new Date().toISOString()}|${name}`); }
+  catch (e) { presenceIssueId.delete(ws.id); throw e; } // task-nya mungkin dihapus: cari/buat ulang di detak berikutnya
 }
-export async function presence(wsPick?: string | null): Promise<Record<string, string>> {
+
+/** Kapan tiap orang terakhir membuka kantor: { nama: waktu ISO }. */
+export async function presence(wsPick?: string | null, issues?: Issue[]): Promise<Record<string, string>> {
   const ws = await workspace(wsPick);
-  const full = await get<{ settings?: Record<string, unknown> | null }>(`/api/workspaces/${ws.id}`, ws.id);
-  return ((full.settings ?? {}).kantor_presence as Record<string, string>) ?? {};
+  const out: Record<string, string> = {};
+  const put = (name: string, at: string) => { if (name && at && (!out[name] || at > out[name])) out[name] = at; };
+  // Data lama (dari pengaturan workspace) tetap dibaca supaya tidak hilang.
+  const full = await get<{ settings?: Record<string, unknown> | null }>(`/api/workspaces/${ws.id}`, ws.id).catch(() => ({ settings: null }));
+  for (const [n, at] of Object.entries(((full.settings ?? {}).kantor_presence as Record<string, string>) ?? {})) put(n, at);
+  for (const i of (issues ?? await allIssues(ws.id)).filter(isPresence)) {
+    for (const [k, v] of Object.entries(i.metadata ?? {})) {
+      if (!k.startsWith("kantor_seen_") || typeof v !== "string") continue;
+      const bar = v.indexOf("|");
+      if (bar > 0) put(v.slice(bar + 1), v.slice(0, bar));
+    }
+  }
+  return out;
 }
 export async function updateIssue(wsPick: string | null | undefined, issueId: string, patch: Record<string, unknown>) {
   const ws = await workspace(wsPick);
@@ -246,14 +284,14 @@ export async function loadWorkspace(wsPick?: string | null) {
   const id = ws.id;
   // Semua permintaan berjalan bersamaan supaya kantor cepat terbuka.
   const [dir, everything] = await Promise.all([loadDirectory(id), allIssues(id)]);
-  // Private chats between people are stored as hidden issues; they never show up as work.
-  const issues = everything.filter(i => !(i.metadata ?? {}).kantor_dm && !i.title.startsWith("💬 Chat"));
+  // Private chats and the presence board are stored as hidden issues; they never show up as work.
+  const issues = everything.filter(i => !isHiddenIssue(i));
   const runs = (await Promise.all(
     dir.agents.map(a => get<unknown>(`/api/agents/${a.id}/tasks?limit=20`, id).then(d => list<Run>(d, "tasks")).catch(() => [] as Run[]))
   )).flat();
   const [settings, seen] = await Promise.all([
     get<WorkspaceFull>(`/api/workspaces/${id}`, id).then(f => (f.settings ?? {}) as Record<string, unknown>).catch(() => ({} as Record<string, unknown>)),
-    presence(id).catch(() => ({} as Record<string, string>)),
+    presence(id, everything).catch(() => ({} as Record<string, string>)),
   ]);
   const kantor = (settings.kantor ?? {}) as KantorSettings;
   const moved = (((settings.kantor_watch ?? {}) as { moved?: Moved }).moved ?? {}) as Moved;
