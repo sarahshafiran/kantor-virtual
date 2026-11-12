@@ -293,6 +293,16 @@ export async function loadWorkspace(wsPick?: string | null) {
     get<WorkspaceFull>(`/api/workspaces/${id}`, id).then(f => (f.settings ?? {}) as Record<string, unknown>).catch(() => ({} as Record<string, unknown>)),
     presence(id, everything).catch(() => ({} as Record<string, string>)),
   ]);
+  // Multica yang menyala di laptop seseorang (runtime online) juga dihitung "di kantor", jadi orang yang
+  // memakai VO versi lain atau tidak membuka VO tetap terlihat. Runtime yang mati hanya memberi "terakhir terlihat".
+  const OFFICE_MS = 5 * 60000;
+  for (const r of dir.runtimes) {
+    const m = dir.members.find(x => x.user_id === r.owner_id);
+    const t = Date.parse(r.last_seen_at);
+    if (!m || !Number.isFinite(t)) continue;
+    const at = new Date(r.status === "online" ? Math.max(t, Date.now() - 60000) : Math.min(t, Date.now() - OFFICE_MS - 1000)).toISOString();
+    if (!seen[m.name] || at > seen[m.name]) seen[m.name] = at;
+  }
   const kantor = (settings.kantor ?? {}) as KantorSettings;
   const moved = (((settings.kantor_watch ?? {}) as { moved?: Moved }).moved ?? {}) as Moved;
   return { ...dir, workspace: ws, issues, runs, kantor, seen, moved };
