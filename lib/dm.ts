@@ -2,7 +2,7 @@
 // unassigned, kept in backlog (no agent ever runs on it), tagged with metadata "kantor_dm".
 // Every message @mentions the other person so Multica drops it in their notifications.
 import "server-only";
-import { workspace, allIssues, loadDirectory, me, call_, createIssue, setIssueMeta, addComment, type Comment } from "./multica";
+import { workspace, allIssues, loadDirectory, me, call_, createIssue, setIssueMeta, addComment, markIssueInboxRead, type Comment } from "./multica";
 import { telegram } from "./telegram";
 import { plainText } from "./mentions";
 
@@ -85,7 +85,7 @@ export async function thread(wsPick: string | null | undefined, otherId: string)
   const issue = await find(ws.id, mine.id, otherId, [mine.name, other.name]);
   if (!issue) return { dmId: null, other: { userId: other.user_id, name: other.name }, messages: [] as DmMessage[] };
   const cs = await comments(ws.id, issue.id);
-  await call_("POST", `/api/inbox/issues/${issue.id}/read`, ws.id, {}).catch(() => null);
+  await markIssueInboxRead(ws.id, issue.id).catch(e => console.warn("[dm] could not mark chat read:", e instanceof Error ? e.message : e));
   const nameOf = (id: string) => dir.members.find(m => m.user_id === id || m.id === id)?.name ?? "Someone";
   return {
     dmId: issue.id, other: { userId: other.user_id, name: other.name },

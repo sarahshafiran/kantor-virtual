@@ -96,6 +96,8 @@ export default function Shell({ buildings, current, section, children }: { build
   const loadCount = useCallback(() => {
     fetch(`/api/inbox?ws=${current.id}&count=1`).then(r => r.json()).then(j => typeof j.unread === "number" && setUnread(j.unread)).catch(() => {});
   }, [current.id]);
+  // Reading a chat also clears its notifications, so refresh the bell count along with the Messages badge.
+  const onDmUnread = useCallback((n: number) => { setDmUnread(n); loadCount(); }, [loadCount]);
   const loadItems = useCallback(async () => {
     setInboxErr(null);
     try { const j = await (await fetch(`/api/inbox?ws=${current.id}`)).json(); if (j.error) throw new Error(j.error); setItems(j.items); setUnread(j.unread); }
@@ -210,7 +212,7 @@ export default function Shell({ buildings, current, section, children }: { build
         </>
       )}
       {newWs && <NewWorkspace onClose={() => setNewWs(false)} />}
-      {dmOpen && <Messages ws={current.id} start={dmWith} onClose={() => { setDmOpen(false); setDmWith(null); }} onUnread={setDmUnread} />}
+      {dmOpen && <Messages ws={current.id} start={dmWith} onClose={() => { setDmOpen(false); setDmWith(null); }} onUnread={onDmUnread} />}
       {task && <div className="scrim" onClick={() => { setTask(null); loadItems(); }} />}
       {task && <TaskPanel id={task} ws={current.id} onClose={() => { setTask(null); loadItems(); }} onChanged={() => router.refresh()} />}
     </div>

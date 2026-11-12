@@ -161,6 +161,18 @@ export async function markInboxRead(wsPick: string | null | undefined, id: strin
   const ws = await workspace(wsPick);
   return call("POST", `/api/inbox/${id}/read`, ws.id, {});
 }
+/** Mark every notification on one issue as read. Older Multica servers (e.g. self-hosted ones) don't have the
+ *  per-issue endpoint yet, so fall back to marking each unread item on that issue one by one. */
+let noIssueRead = false;
+export async function markIssueInboxRead(wsId: string, issueId: string) {
+  if (!noIssueRead) {
+    try { await call("POST", `/api/inbox/issues/${issueId}/read`, wsId, {}); return; }
+    catch (e) { if (!/→ (404|405)\b/.test(String((e as Error).message))) throw e; noIssueRead = true; }
+  }
+  const d = await call<unknown>("GET", "/api/inbox", wsId);
+  const items = (Array.isArray(d) ? d : (d as { items?: unknown[] })?.items ?? []) as { id: string; issue_id: string | null; read: boolean }[];
+  await Promise.all(items.filter(i => i.issue_id === issueId && !i.read).map(i => call("POST", `/api/inbox/${i.id}/read`, wsId, {})));
+}
 export async function markAllInboxRead(wsPick?: string | null) {
   const ws = await workspace(wsPick);
   return call("POST", "/api/inbox/mark-all-read", ws.id, {});
