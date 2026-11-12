@@ -4,7 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import FilePicker, { uploadAll } from "./file-picker";
 import FilePreview from "./file-preview";
-import { Px, type PxName } from "./pixel-icon";
+import { Px, Emo, type PxName } from "./pixel-icon";
 
 type Session = { id: string; title: string; updatedAt: string; unread: number; last: string };
 type Msg = { id: string; mine: boolean; text: string; when: string; failed: string | null; files: { id: string; name: string; url: string }[] };
@@ -86,7 +86,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
   return (
     <div className="drawer wide chat" role="dialog" aria-modal="true" aria-label={`Chat with ${agent.name}`}>
       <div className="dhead">
-        <span className="avatar">{agent.emoji ?? <Px name="chat" />}</span>
+        <span className="avatar">{agent.emoji ? <Emo e={agent.emoji} /> : <Px name="chat" />}</span>
         <div className="meta"><h2>Chat with {agent.name}</h2><div className="role">Talk freely. Nothing gets done until you ask.</div></div>
         <button className="x" onClick={onClose} aria-label="Close">✕</button>
       </div>
@@ -109,7 +109,7 @@ export default function ChatPanel({ ws, agent, isMika, projectId, laptopOn, onCl
             )}
             {msgs.map(m => (
               <div key={m.id} className={`msg ${m.mine ? "me" : "bot"}`}>
-                <div className="from"><span>{m.mine ? "You" : `${agent.emoji ?? ""} ${agent.name}`}</span><span>{m.when}</span></div>
+                <div className="from"><span>{m.mine ? "You" : <>{agent.emoji ? <Emo e={agent.emoji} /> : null} {agent.name}</>}</span><span>{m.when}</span></div>
                 {m.text && <div className="md">{md(m.text)}</div>}
                 {m.failed && <div className="note bad">{m.failed}</div>}
                 {m.files.map(f => <FilePreview key={f.id} f={f} />)}

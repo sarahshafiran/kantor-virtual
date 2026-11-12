@@ -2,7 +2,7 @@
 // Create a project: it shows up as a tab on the Task Board and as a room in the Office.
 import { useState } from "react";
 import type { Mentionable } from "@/lib/mentions";
-import { Px } from "./pixel-icon";
+import { Px, Emo } from "./pixel-icon";
 
 const ICONS = ["🎨", "🔬", "⚙️", "📣", "📚", "🛍️", "💡", "🧪", "🗓️", "🚀", "🧭", "🎬"];
 
@@ -29,7 +29,7 @@ export default function NewProject({ ws, people, onDone }: { ws: string; people:
         <label className="sect" htmlFor="np-title">Name</label>
         <input id="np-title" className="input" autoFocus placeholder="e.g. Website relaunch" value={title} onChange={e => setTitle(e.target.value)} />
         <div className="sect">Icon</div>
-        <div className="emojipick">{ICONS.map(x => <button type="button" key={x} aria-pressed={icon === x} onClick={() => setIcon(x)}>{x}</button>)}</div>
+        <div className="emojipick">{ICONS.map(x => <button type="button" key={x} aria-pressed={icon === x} onClick={() => setIcon(x)} aria-label={x}><Emo e={x} /></button>)}</div>
         <label className="sect" htmlFor="np-desc">Goal (optional)</label>
         <textarea id="np-desc" className="input" rows={3} placeholder="What does done look like?" value={desc} onChange={e => setDesc(e.target.value)} />
         <div className="formgrid">

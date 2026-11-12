@@ -827,3 +827,5 @@ svg.px{display:inline-block;vertical-align:-0.22em;flex:none;image-rendering:pix
 .tile-icon svg.px{width:40px;height:40px}
 .flag svg.px{width:1.1em;height:1.1em}
 .chatbtn svg.px{width:15px;height:15px;vertical-align:0}
+.emojipick svg.px{width:24px;height:24px;vertical-align:middle}
+.kc-who i svg.px,.mp-av svg.px{width:80%;height:80%}

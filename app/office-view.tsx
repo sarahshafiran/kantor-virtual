@@ -9,7 +9,7 @@ import ThemeToggle from "./theme-toggle";
 import FilePicker, { uploadAll } from "./file-picker";
 import ChatPanel, { MANAGER, isManager } from "./chat-panel";
 import PixelDesk, { type PixelState } from "./pixel-desk";
-import { Px, StateIcon, type PxName } from "./pixel-icon";
+import { Px, Emo, StateIcon, type PxName } from "./pixel-icon";
 import { HandoverLayer, useHandoverDetector, type Handover } from "./handover";
 import NewProject from "./new-project";
 
@@ -20,7 +20,7 @@ const ago = (mins: number) => mins < 60 ? `${Math.round(mins)}m ago` : mins < 14
 function Avatar({ d, home }: { d: Desk; home?: boolean }) {
   return (
     <span className="avatar">
-      {home ? <Px name="home" /> : d.avatar ? <img src={d.avatar} alt="" /> : d.emoji ?? d.name.slice(0, 1)}
+      {home ? <Px name="home" /> : d.avatar ? <img src={d.avatar} alt="" /> : d.emoji ? <Emo e={d.emoji} /> : d.name.slice(0, 1)}
       <span className="status-dot" />
     </span>
   );
@@ -291,7 +291,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
             {office.rooms.map(r => (
               <section key={r.id} className="room" aria-label={r.name} style={width(r.desks.length)}>
                 <div className="roomhead">
-                  <div><h2>{r.icon ? `${r.icon} ` : ""}{r.name}</h2>{r.progress && <div className="sub">{r.progress}</div>}</div>
+                  <div><h2>{r.icon ? <><Emo e={r.icon} /> </> : null}{r.name}</h2>{r.progress && <div className="sub">{r.progress}</div>}</div>
                 </div>
                 <div className="desks">{r.desks.map(d => <DeskButton key={d.agentId} d={d} onOpen={() => { setOpenDesk(d); setAdding(false); }} onChat={() => setChatWith(d)} walking={walkingIds.has(d.agentId)} />)}</div>
               </section>
@@ -411,7 +411,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
       {/* Floating button to chat with the office manager, like a help button on a website. */}
       {mika && !chatWith && !openDesk && !openTask && !openHuman && (
         <button className="mikafab" onClick={() => setChatWith(mika)} aria-label={`Chat with ${MANAGER}, the office manager`}>
-          <span className="mf-av">{mika.avatar ? <img src={mika.avatar} alt="" /> : (mika.emoji ?? "🦄")}</span>
+          <span className="mf-av">{mika.avatar ? <img src={mika.avatar} alt="" /> : <Emo e={mika.emoji ?? "🦄"} />}</span>
           <span className="mf-txt"><b>Ask {MANAGER}</b><small>ideas, tasks, new agents</small></span>
         </button>
       )}

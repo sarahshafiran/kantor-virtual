@@ -7,7 +7,7 @@ import TaskPanel from "../task-panel";
 import ThemeToggle from "../theme-toggle";
 import ChatPanel, { isManager } from "../chat-panel";
 import { openChat } from "../messages";
-import { Px, StateIcon, type PxName } from "../pixel-icon";
+import { Px, Emo, StateIcon, type PxName } from "../pixel-icon";
 
 const LEVEL: Record<Load["level"], { icon: PxName; label: string; tip: string }> = {
   santai: { icon: "dot-on", label: "Free", tip: "no open tasks" },
@@ -52,7 +52,7 @@ function MateCard({ m, team, onOpenTask, onChat, onToast }: { m: Mate; team: Tea
   return (
     <article className={`mate ${m.kind} st-${m.state}`}>
       <div className="mate-top">
-        <span className="avatar">{m.avatar ? <img src={m.avatar} alt="" /> : m.emoji ?? (m.kind === "agent" ? <Px name="agent" /> : m.name.slice(0, 1).toUpperCase())}<span className="status-dot" /></span>
+        <span className="avatar">{m.avatar ? <img src={m.avatar} alt="" /> : m.emoji ? <Emo e={m.emoji} /> : (m.kind === "agent" ? <Px name="agent" /> : m.name.slice(0, 1).toUpperCase())}<span className="status-dot" /></span>
         <div className="mate-id">
           <h3>{m.name}{m.isMe && <span className="me-tag">you</span>}</h3>
           {m.kind === "human" && <small>{[m.role, m.sub].filter(Boolean).join(" · ")}</small>}
@@ -73,7 +73,7 @@ function MateCard({ m, team, onOpenTask, onChat, onToast }: { m: Mate; team: Tea
 
       <div className="mate-proj">
         {m.projects.length ? m.projects.map(p => (
-          <Link key={p.id} className="chip" href={`/papan?ws=${team.workspaceId}&p=${p.id}`}>{p.icon ?? <Px name="folder" />} {p.name}{p.open ? <small> · {p.open}</small> : null}</Link>
+          <Link key={p.id} className="chip" href={`/papan?ws=${team.workspaceId}&p=${p.id}`}>{p.icon ? <Emo e={p.icon} /> : <Px name="folder" />} {p.name}{p.open ? <small> · {p.open}</small> : null}</Link>
         )) : <span className="desc">Not on any project yet</span>}
       </div>
 
@@ -88,7 +88,7 @@ function MateCard({ m, team, onOpenTask, onChat, onToast }: { m: Mate; team: Tea
         <div className="tasks">
           {openTasks.map(t => (
             <button key={t.id} className="tasklink" onClick={() => onOpenTask(t.id)}>
-              <span className="t">{t.title}<small>{t.project ? <>{t.projectIcon ?? <Px name="folder" />} {t.project}</> : <><Px name="loose" /> No project</>}</small></span>
+              <span className="t">{t.title}<small>{t.project ? <>{t.projectIcon ? <Emo e={t.projectIcon} /> : <Px name="folder" />} {t.project}</> : <><Px name="loose" /> No project</>}</small></span>
               <span className="meta">
                 <span className={`pill p-${t.col === "in_review" ? "review" : t.col === "in_progress" ? "doing" : "queued"}`}>{COL_LABEL[t.col]}</span>
                 {t.dueText && <span className={`due ${t.dueFlag ?? "ok"}`}>{t.dueText}</span>}
@@ -146,7 +146,7 @@ function Recruit({ team, onDone }: { team: Team; onDone: (msg: string | null) =>
             <label className="sect" htmlFor="rc-name">Agent name</label>
             <input id="rc-name" className="input" autoFocus placeholder="e.g. Rara Research" value={name} onChange={e => setName(e.target.value)} />
             <div className="sect">Avatar</div>
-            <div className="emojipick">{EMOJIS.map(x => <button type="button" key={x} aria-pressed={emoji === x} onClick={() => setEmoji(x)}>{x}</button>)}</div>
+            <div className="emojipick">{EMOJIS.map(x => <button type="button" key={x} aria-pressed={emoji === x} onClick={() => setEmoji(x)} aria-label={x}><Emo e={x} /></button>)}</div>
             <label className="sect" htmlFor="rc-desc">What do they do?</label>
             <input id="rc-desc" className="input" placeholder="e.g. UX researcher who summarises user interviews" value={desc} onChange={e => setDesc(e.target.value)} />
             <details className="extra"><summary>Working instructions (optional)</summary>

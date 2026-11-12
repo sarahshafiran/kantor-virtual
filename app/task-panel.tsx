@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import type { TaskDetail } from "@/lib/detail";
 import FilePicker, { uploadAll } from "./file-picker";
 import FilePreview, { kindOf, ICON } from "./file-preview";
-import { Px } from "./pixel-icon";
+import { Px, Emo } from "./pixel-icon";
 import MentionBox, { mentionLink, keepMentionUrl } from "./mention-box";
 import { encodeMentions, type Mentionable } from "@/lib/mentions";
 import { answersToText } from "@/lib/digest";
@@ -115,7 +115,7 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
 
   const head = (
     <div className="tp-head">
-      <span className="avatar">{d?.assignee.emoji ?? <Px name={d?.assignee.kind === "member" ? "person" : "file"} />}</span>
+      <span className="avatar">{d?.assignee.emoji ? <Emo e={d.assignee.emoji} /> : <Px name={d?.assignee.kind === "member" ? "person" : "file"} />}</span>
       <div className="meta">
         {renaming ? (
           <form onSubmit={e => { e.preventDefault(); act("rename", { text: newName }).then(() => setRenaming(false)); }} style={{ display: "flex", gap: 6 }}>
@@ -160,7 +160,7 @@ export default function TaskPanel({ id, ws, onClose, onChanged }: { id: string; 
                 {d.messages.length === 0 && !pending && <p className="desc">No messages yet. The agent will post results here.</p>}
                 {d.messages.map(m => (
                   <div key={m.id} id={`m-${m.id}`} className={`msg ${m.whoKind === "member" ? "me" : "bot"} ${dg?.messageId === m.id ? "hl" : ""}`}>
-                    <div className="from"><span>{m.emoji ? `${m.emoji} ` : ""}{m.who}</span><span>{m.when}</span></div>
+                    <div className="from"><span>{m.emoji ? <><Emo e={m.emoji} /> </> : null}{m.who}</span><span>{m.when}</span></div>
                     {m.text && <div className="md">{md(m.text)}</div>}
                     {(m.images.length > 0 || m.files.length > 0) && (
                       <div className="minifiles">

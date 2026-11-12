@@ -6,7 +6,7 @@ import { COLS } from "@/lib/board-cols";
 import TaskPanel from "../task-panel";
 import ThemeToggle from "../theme-toggle";
 import NewProject from "../new-project";
-import { Px } from "../pixel-icon";
+import { Px, Emo } from "../pixel-icon";
 
 const LOOSE = "none";
 
@@ -14,9 +14,9 @@ function CardItem({ c, showProject, onOpen }: { c: Card; showProject: boolean; o
   return (
     <button className={`kcard ${c.dueFlag ?? ""}`} onClick={onOpen}>
       <b className="kc-t">{c.title}</b>
-      {showProject && <span className="kc-proj">{c.project ? <>{c.projectIcon ?? <Px name="folder" />} {c.project}</> : <><Px name="loose" /> No project</>}</span>}
+      {showProject && <span className="kc-proj">{c.project ? <>{c.projectIcon ? <Emo e={c.projectIcon} /> : <Px name="folder" />} {c.project}</> : <><Px name="loose" /> No project</>}</span>}
       <span className="kc-foot">
-        {c.who ? <span className={`kc-who ${c.who.kind}`}><i>{c.who.emoji ?? (c.who.kind === "agent" ? <Px name="agent" /> : c.who.name.slice(0, 1).toUpperCase())}</i>{c.who.name}</span>
+        {c.who ? <span className={`kc-who ${c.who.kind}`}><i>{c.who.emoji ? <Emo e={c.who.emoji} /> : (c.who.kind === "agent" ? <Px name="agent" /> : c.who.name.slice(0, 1).toUpperCase())}</i>{c.who.name}</span>
           : <span className="kc-who none"><i>?</i>Unassigned</span>}
         {c.dueText && <span className={`due ${c.dueFlag ?? "ok"}`}>{c.dueFlag === "late" ? <><Px name="dot-late" /> </> : c.dueFlag === "risk" ? <><Px name="dot-risk" /> </> : <><Px name="calendar" /> </>}{c.dueText}</span>}
       </span>
@@ -117,7 +117,7 @@ export default function BoardView({ board, initialProject }: { board: Board; ini
           </button>
           {board.projects.map(p => (
             <button key={p.id} className="ptab" aria-pressed={proj === p.id} onClick={() => setProj(p.id)}>
-              <span className="pt-ic">{p.icon ?? <Px name="folder" />}</span>
+              <span className="pt-ic">{p.icon ? <Emo e={p.icon} /> : <Px name="folder" />}</span>
               <span className="pt-t"><b>{p.name}</b><small>{p.done}/{p.total} done</small></span>
               <span className="pt-bar" aria-hidden><i style={{ width: `${p.total ? (p.done / p.total) * 100 : 0}%` }} /></span>
             </button>
@@ -134,7 +134,7 @@ export default function BoardView({ board, initialProject }: { board: Board; ini
           <p className="desc">
             {proj === "all" ? `${total} open across ${board.projects.length} project${board.projects.length === 1 ? "" : "s"}, plus ${board.loose} without one.` :
               proj === LOOSE ? "Loose tasks that don't belong to a project yet." :
-              current ? `${current.icon ? current.icon + " " : ""}${current.name}: ${current.open} open, ${current.done} done${current.due ? ` · due ${new Date(current.due + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}.` : ""}
+              current ? <>{current.icon ? <><Emo e={current.icon} /> </> : null}{`${current.name}: ${current.open} open, ${current.done} done${current.due ? ` · due ${new Date(current.due + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}.`}</> : ""}
           </p>
           <label className="whofilter">Show tasks for
             <select className="input" value={who} onChange={e => setWho(e.target.value)}>

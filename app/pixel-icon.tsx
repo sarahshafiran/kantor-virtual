@@ -31,7 +31,7 @@ const MAPS = {
   moon: ["....oooo....", "..ooyyo.....", ".oyyyo......", ".oyyo.......", "oyyyo.......", "oyyyo.......", "oyyyo.......", "oyyyyo......", ".oyyyyo...o.", ".oyyyyyoooo.", "..ooyyyyyo..", "....ooooo..."],
   sun: [".....rr.....", ".r........r.", "............", "....oooo....", "...oyyyyo...", "rr.oyyyyo.rr", "rr.oyyyyo.rr", "...oyyyyo...", "....oooo....", "............", ".r........r.", ".....rr....."],
   monitor: ["oooooooooooo", "otttttttttto", "otttttttttto", "ottwttttttto", "otttttttttto", "otttttttttto", "oooooooooooo", ".....oo.....", "...oooooo..."],
-  palette: ["...oooooo...", ".oowwwwwwoo.", "owwpwwwwtwwo", "owwwwwwwwwwo", "owywwwwwwvwo", "owwwwwwwwwwo", "owwrwwwooo..", ".owwwwwo....", "..ooooo....."],
+  palette: ["...oooooo...", ".ooyyyyyyoo.", "oyypyyyytyyo", "oyyyyyyyyyyo", "oyxyyyyyyvyo", "oyyyyyyyyyyo", "oyyryyyooo..", ".oyyyyyo....", "..ooooo....."],
   idea: ["...oooooo...", "..oyyyyyyo..", ".oyywyyyyyo.", ".oyywyyyyyo.", ".oyyyyyyyyo.", "..oyyyyyyo..", "...oyyyyo...", "...oooooo...", "...oggggo...", "...oooooo...", "....oooo...."],
   wave: ["..o.o.o.....", ".oyoyoyo....", ".oyoyoyo.o..", ".oyyyyyooyo.", ".oyyyyyyyo..", ".oyyyyyyo...", "..oyyyyyo...", "...ooooo...."],
   party: ["..t...p...y.", "......p.....", "....p....t..", ".....ooo....", "....oyyyo..y", "...oyrryo...", "..oyyyyo....", ".oyrryo.....", "oyyyyo......", "ooooo......."],
@@ -61,6 +61,29 @@ const MAPS = {
   desk: ["..oooooooo..", "..otttttto..", "..otttttto..", "..oooooooo..", ".....oo.....", "oooooooooooo", "oppppppppppo", "oooooooooooo", ".o........o.", ".o........o."],
   lounge: ["..oooooooo..", "..ovvvvvvo..", "..ovvvvvvo..", "ooovvvvvvooo", "ovoooooooovo", "ovvvvvvvvvvo", "oooooooooooo", ".o........o."],
   todo: ["....oooo....", ".oooyyyyooo.", ".owwoooowwo.", ".owwwwwwwwo.", ".owvwgggwwo.", ".owwwwwwwwo.", ".owvwgggwwo.", ".owwwwwwwwo.", ".owvwggwwwo.", ".owwwwwwwwo.", ".oooooooooo."],
+  // Ikon project
+  bag: ["....oooo....", "...o....o...", "...o....o...", ".oooooooooo.", ".oppppppppo.", ".oppppppppo.", ".opppwwpppo.", ".oppppppppo.", ".oppppppppo.", ".oooooooooo."],
+  book: [".oooo..oooo.", "owwwwoowwwwo", "owggwoowggwo", "owwwwoowwwwo", "owggwoowggwo", "owwwwoowwwwo", "owggwoowggwo", "owwwwoowwwwo", "otttttttttto", ".oooooooooo."],
+  books: ["....oooo....", "oooootto....", "oppoottooooo", "oppoottooyyo", "owwoowwooyyo", "oppoottoowwo", "oppoottooyyo", "oppoottooyyo", "owwoowwooyyo", "oooooooooooo"],
+  flask: ["...oooooo...", "....owwo....", "....owwo....", "....owwo....", "...owwwwo...", "..owwwwwwo..", ".otttttttto.", "otttwtttttto", "ottttttwttto", "otttttttttto", ".oooooooooo."],
+  compass: ["...oooooo...", ".oowwwwwwoo.", ".owwwwwxwwo.", "owwwwwxxwwwo", "owwwwxxwwwwo", "owwwwoowwwwo", "owwwggwwwwwo", "owwwggwwwwwo", ".owggwwwwwo.", ".oowwwwwwoo.", "...oooooo..."],
+  clapper: ["oooooooooooo", "owwoowwoowwo", "oooooooooooo", "ovvvvvvvvvvo", "ovvvvvvvvvvo", "ovvvvvvvvvvo", "ovvvvvvvvvvo", "ovvvvvvvvvvo", "oooooooooooo"],
+  // Avatar worker
+  star: [".....oo.....", "....oyyo....", "....oyyo....", "ooooyyyyoooo", "oyyyyyyyyyyo", ".oyyyyyyyyo.", "..oyyyyyyo..", "..oyyyyyyo..", ".oyyyooyyyo.", ".oyyo..oyyo.", ".ooo....ooo."],
+  bolt: ["......oooo..", ".....oyyo...", "....oyyo....", "...oyyo.....", "..oyyyyyyo..", "..ooooyyo...", ".....oyyo...", "....oyyo....", "...oyyo.....", "...ooo......"],
+  fox: ["o..........o", "oo........oo", "oro......oro", "orro....orro", "orrroooorrro", "orrrrrrrrrro", "orrorrrrorro", "owwrrrrrrwwo", ".owwwwwwwwo.", "..owwoowwo..", "...owwwwo...", "....oooo...."],
+  unicorn: [".....o......", "....oyo.....", "....oyo.....", ".oo.oooo.oo.", ".opowwwwopo.", ".owwwwwwwwo.", "owwowwwwowwo", "owwwwwwwwwwo", "owpwwwwwwpwo", ".owwwwwwwwo.", "..owwwwwwo..", "...oooooo..."],
+  invader: ["..v......v..", "...v....v...", "..vvvvvvvv..", ".vvovvvvovv.", "vvvvvvvvvvvv", "v.vvvvvvvv.v", "v.v......v.v", "...vv..vv..."],
+  whale: ["........t.t.", ".........t..", "..oooooo....", ".otttttto.oo", "otottttttoto", "ottttttttto.", "owwwwwwwwo..", ".owwwwwwo...", "..oooooo...."],
+  penguin: ["...oooooo...", "..oooooooo..", ".oowwoowwoo.", ".owowwwwowo.", ".owwwyywwwo.", "ooowwwwwwooo", "ooowwwwwwooo", ".oowwwwwwoo.", "..oowwwwoo..", "..yy....yy.."],
+  panda: [".oo......oo.", "oo.oooooo.oo", "..owwwwwwo..", ".owwwwwwwwo.", ".owoowwoowo.", "owwoowwoowwo", "owwwwwwwwwwo", "owwwwoowwwwo", ".owwwwwwwwo.", "..oooooooo.."],
+  owl: [".o........o.", ".oo......oo.", ".orooooooro.", ".orrrrrrrro.", "orwwwrrwwwro", "orwowrrwowro", "orwwwyywwwro", "orrrryyrrrro", "orryrrrryrro", ".orrrrrrrro.", "...yy..yy..."],
+  octopus: ["...oooooo...", "..oppppppo..", ".oppppppppo.", ".oppoppoppo.", ".oppppppppo.", ".oppppppppo.", "oppppppppppo", "opoppoppoppo", "oo.oo.oo.oo."],
+  bee: ["...oo.oo....", "..owwowwo...", "..owwowwo...", ".oooooooooo.", "oyyoyyoyyyo.", "oyyoyyoyyoyo", "oyyoyyoyyyo.", ".oooooooooo."],
+  turtle: ["..ooooo.....", ".ottytto....", "otyyyyyto.oo", "otttyttttoyo", "oooooooooooo", ".oy....oy..."],
+  parrot: ["...oooo.....", "..oxxxxo....", ".oxxwoxo....", ".oxxxxxoo...", ".oxxxxoyyo..", ".oxxxxxoyo..", ".otttttoo...", ".ottttto....", "..otttyo....", "..oyyyo.....", "...ooo......"],
+  lion: ["..oooooooo..", ".orrrrrrrro.", "orroooooorro", "oroyyyyyyoro", "oroyoyyoyoro", "oroyyyyyyoro", "oroyyooyyoro", "oroyyyyyyoro", "orroooooorro", ".orrrrrrrro.", "..oooooooo.."],
+  koala: [".ooo....ooo.", "ogggo..ogggo", "oggggggggggo", ".oggggggggo.", ".ogoggggogo.", ".ogggoogggo.", ".ogggoogggo.", "..oggggggo..", "...oooooo..."],
   dot: ["..oooo..", ".oXXXXo.", "oXwXXXXo", "oXXXXXXo", "oXXXXXXo", "oXXXXXXo", ".oXXXXo.", "..oooo.."],
 } as const;
 
@@ -112,4 +135,19 @@ const STATE_ICON: Partial<Record<string, PxName>> = { closed: "lock", off: "moon
 export function StateIcon({ state }: { state: string }) {
   const n = STATE_ICON[state];
   return n ? <><Px name={n} /> </> : null;
+}
+
+// Emoji pilihan (ikon project, avatar worker) yang punya versi pixel.
+const EMOJI: Record<string, PxName> = {
+  "🛍": "bag", "📖": "book", "📚": "books", "🎨": "palette", "🔬": "flask", "🧪": "flask", "⚙": "gear", "📣": "mention",
+  "💡": "idea", "🗓": "calendar", "📅": "calendar", "🚀": "rocket", "🧭": "compass", "🎬": "clapper", "📁": "folder", "📋": "todo",
+  "🦄": "unicorn", "👾": "invader", "🐳": "whale", "🐋": "whale", "🐧": "penguin", "⭐": "star", "🌟": "star", "⚡": "bolt", "🦊": "fox",
+  "🐼": "panda", "🦉": "owl", "🐙": "octopus", "🐝": "bee", "🐢": "turtle", "🦜": "parrot", "🦁": "lion", "🐨": "koala", "🤖": "agent",
+};
+export const pxFor = (e?: string | null): PxName | null => (e ? EMOJI[e.replace(/\uFE0F/g, "").trim()] ?? null : null);
+
+/** Emoji pilihan orang (ikon project / avatar): tampil sebagai ikon pixel kalau ada versinya, kalau tidak tetap emoji. */
+export function Emo({ e, size }: { e: string; size?: number | string }) {
+  const n = pxFor(e);
+  return n ? <Px name={n} size={size} /> : <>{e}</>;
 }
