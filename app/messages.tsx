@@ -10,6 +10,14 @@ import { Px, PxSpan, rehypePx } from "./pixel-icon";
 const md = (t: string) => <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypePx]} urlTransform={keepMentionUrl} components={{ a: mentionLink, span: PxSpan }}>{t}</ReactMarkdown>;
 const POLL_MS = 5000;
 
+/** Highlight the search term inside a piece of text. */
+function Mark({ text, term }: { text: string; term: string }) {
+  if (!term) return <>{text}</>;
+  const at = text.toLowerCase().indexOf(term);
+  if (at < 0) return <>{text}</>;
+  return <>{text.slice(0, at)}<mark>{text.slice(at, at + term.length)}</mark>{text.slice(at + term.length)}</>;
+}
+
 /** Ask the sidebar to open a chat with someone (used by the Message buttons on people cards). */
 export const openChat = (userId: string) => dispatchEvent(new CustomEvent("kantor:dm", { detail: { userId } }));
 
@@ -20,6 +28,8 @@ export default function Messages({ ws, start, onClose, onUnread }: { ws: string;
   const [text, setText] = useState("");
   const [sending, setSending] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [q, setQ] = useState("");
+  const [found, setFound] = useState<{ q: string; people: DmPerson[] } | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const other = people?.find(p => p.userId === withId) ?? null;
 
@@ -49,6 +59,24 @@ export default function Messages({ ws, start, onClose, onUnread }: { ws: string;
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") { if (withId && !start) setWithId(null); else onClose(); } };
     addEventListener("keydown", k); return () => removeEventListener("keydown", k);
   }, [withId, start, onClose]);
+
+  // Search: names filter right away; message text is searched on the server (every message, not just the last one).
+  const term = q.trim().toLowerCase();
+  useEffect(() => {
+    if (term.length < 2) { setFound(null); return; }
+    const t = setTimeout(() => {
+      fetch(`/api/dm?ws=${ws}&q=${encodeURIComponent(term)}`).then(r => r.json())
+        .then(j => { if (!j.error) setFound({ q: term, people: j.people }); }).catch(() => {});
+    }, 300);
+    return () => clearTimeout(t);
+  }, [term, ws]);
+  const shown = !term ? people : (() => {
+    const byName = (people ?? []).filter(p => p.name.toLowerCase().includes(term) || p.email.toLowerCase().includes(term));
+    const hits = found?.q === term ? found.people.filter(p => p.hit) : [];
+    const ids = new Set(byName.map(p => p.userId));
+    return [...byName.map(p => hits.find(h => h.userId === p.userId) ?? p), ...hits.filter(h => !ids.has(h.userId))];
+  })();
+  const searching = term.length >= 2 && found?.q !== term;
 
   async function send() {
     if (!withId || !text.trim()) return;
@@ -88,13 +116,23 @@ export default function Messages({ ws, start, onClose, onUnread }: { ws: string;
             {err && <div className="note bad">{err}</div>}
             {!people && !err && <div className="loading"><span className="spinner" /> Loading…</div>}
             {people && !people.length && <p className="desc">Nobody else is in this workspace yet. Invite someone from Team Members.</p>}
+            {!!people?.length && (
+              <label className="dmsearch">
+                <Px name="eyes" />
+                <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Search a name or message…" aria-label="Search a name or message"
+                  autoFocus onKeyDown={e => { if (e.key === "Enter" && shown?.length) { setWithId(shown[0].userId); setQ(""); } if (e.key === "Escape" && q) { e.stopPropagation(); setQ(""); } }} />
+                {searching && <span className="spinner sm" />}
+              </label>
+            )}
+            {term && shown && !shown.length && !searching && <p className="desc">No name or message matches “{q.trim()}”.</p>}
             <ul className="dmlist">
-              {people?.map(p => (
+              {shown?.map(p => (
                 <li key={p.userId}>
-                  <button className={`dmrow ${p.unread ? "unread" : ""}`} onClick={() => setWithId(p.userId)}>
+                  <button className={`dmrow ${p.unread ? "unread" : ""}`} onClick={() => { setWithId(p.userId); setQ(""); }}>
                     <span className="avatar dm-av">{initial(p.name)}</span>
-                    <span className="dm-t"><b>{p.name}</b><small>{p.last ? `${p.last.mine ? "You: " : ""}${p.last.text}` : <>Say hi <Px name="wave" /></>}</small></span>
-                    <span className="dm-when">{p.last?.when}{p.unread > 0 && <span className="sl-badge">{p.unread}</span>}</span>
+                    <span className="dm-t"><b><Mark text={p.name} term={term} /></b>
+                      <small>{p.hit ? <>{p.hit.mine ? "You: " : ""}<Mark text={p.hit.text} term={term} /></> : p.last ? `${p.last.mine ? "You: " : ""}${p.last.text}` : <>Say hi <Px name="wave" /></>}</small></span>
+                    <span className="dm-when">{(p.hit ?? p.last)?.when}{p.unread > 0 && <span className="sl-badge">{p.unread}</span>}</span>
                   </button>
                 </li>
               ))}

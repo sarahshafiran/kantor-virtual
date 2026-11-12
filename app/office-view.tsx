@@ -12,6 +12,7 @@ import PixelDesk, { type PixelState } from "./pixel-desk";
 import { Px, Emo, PxText, StateIcon, type PxName } from "./pixel-icon";
 import { HandoverLayer, useHandoverDetector, type Handover } from "./handover";
 import NewProject from "./new-project";
+import { openChat } from "./messages";
 
 const REFRESH_MS = 30_000;
 
@@ -26,13 +27,19 @@ function Avatar({ d, home }: { d: Desk; home?: boolean }) {
   );
 }
 
-function Presence({ name, at }: { name: string; at?: string }) {
+/** Small chat-bubble button that opens Messages with one person. */
+function ChatWith({ name, onChat, className }: { name: string; onChat: () => void; className?: string }) {
+  return <button type="button" className={`chatwith ${className ?? ""}`} onClick={e => { e.stopPropagation(); onChat(); }} title={`Message ${name}`} aria-label={`Message ${name}`}><Px name="chat" /></button>;
+}
+
+function Presence({ name, at, onChat }: { name: string; at?: string; onChat?: () => void }) {
   const mins = at ? (Date.now() - Date.parse(at)) / 60000 : Infinity;
   const on = mins < 5;
   const label = on ? "in the office" : !at ? "never opened" : ago(mins);
   return (
     <span className={`person ${on ? "on" : ""}`} title={`${name}: ${on ? "has the office open" : "last opened the office " + label}`}>
       <span className="initial">{name.slice(0, 1).toUpperCase()}</span>{name} <small>{label}</small>
+      {onChat && <ChatWith name={name} onChat={onChat} />}
     </span>
   );
 }
@@ -80,7 +87,7 @@ function DeskButton({ d, onOpen, onChat, walking }: { d: Desk; onOpen: () => voi
   );
 }
 
-function HumanDesk({ name, at, review, tasks, onOpen }: { name: string; at?: string; review: number; tasks: number; onOpen: () => void }) {
+function HumanDesk({ name, at, review, tasks, onOpen, onChat }: { name: string; at?: string; review: number; tasks: number; onOpen: () => void; onChat?: () => void }) {
   const mins = at ? (Date.now() - Date.parse(at)) / 60000 : Infinity;
   const here = mins < 5;
   const label = here ? "in the office" : !at ? "not in yet" : `last seen ${ago(mins)}`;
@@ -100,6 +107,7 @@ function HumanDesk({ name, at, review, tasks, onOpen }: { name: string; at?: str
         <span className="who">{name}</span>
         <span className="model">Team</span>
       </button>
+      {onChat && <ChatWith name={name} onChat={onChat} className="ondesk" />}
     </div>
   );
 }
@@ -171,7 +179,9 @@ function NewTaskForm({ ws, desk, projects, onDone, initialDetail = "" }: { initi
   );
 }
 
-export default function OfficeView({ office, attention, people, seen }: { office: Office; buildings: Building[]; attention: Office["attention"]; people: string[]; seen: Record<string, string> }) {
+export default function OfficeView({ office, attention, people, seen, meId }: { office: Office; buildings: Building[]; attention: Office["attention"]; people: string[]; seen: Record<string, string>; meId?: string | null }) {
+  // Chat bubble for everyone except yourself.
+  const chatTo = (name: string) => { const m = office.members.find(x => x.name === name); return m && m.id !== meId ? () => openChat(m.id) : undefined; };
   const router = useRouter();
   const [refreshing, startRefresh] = useTransition();
   const refresh = useCallback(() => startRefresh(() => router.refresh()), [router]);
@@ -258,7 +268,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
             <OfficeSwitch key={office.workspaceId + String(office.switchOpen)} ws={office.workspaceId} name={office.workspace} switchOpen={office.switchOpen} laptopOn={office.open} parked={office.parked}
               onDone={msg => { setToast(msg); refresh(); }} />
             <span className="hgroup" aria-label="Team">
-              {people.map(p => <Presence key={p} name={p} at={seen[p]} />)}
+              {people.map(p => <Presence key={p} name={p} at={seen[p]} onChat={chatTo(p)} />)}
             </span>
             <ThemeToggle />
             <span className="clock">{refreshing ? <><span className="spinner sm" /> Refreshing…</> : `Updated ${office.updatedAt}`}</span>
@@ -284,7 +294,7 @@ export default function OfficeView({ office, attention, people, seen }: { office
               <div className="roomhead"><div><h2><Px name="desk" /> Team desks</h2><div className="sub">Finished work and to-dos for people land here</div></div></div>
               <div className="desks">{people.map(p => (
                 <HumanDesk key={p} name={p} at={seen[p]} review={a.review.length} tasks={a.human.filter(t => t.assignee === p).length}
-                  onOpen={() => { setOpenHuman(p); setOpenDesk(null); }} />
+                  onOpen={() => { setOpenHuman(p); setOpenDesk(null); }} onChat={chatTo(p)} />
               ))}</div>
             </section>
 

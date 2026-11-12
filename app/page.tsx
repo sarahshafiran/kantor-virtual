@@ -1,4 +1,4 @@
-import { loadWorkspace, workspaces } from "@/lib/multica";
+import { loadWorkspace, workspaces, me } from "@/lib/multica";
 import { buildOffice, type Office } from "@/lib/office";
 import OfficeView from "./office-view";
 import Shell from "./shell";
@@ -10,7 +10,7 @@ export type Building = { id: string; slug: string; name: string; attention: numb
 export default async function Page({ searchParams }: { searchParams: Promise<{ ws?: string }> }) {
   const { ws } = await searchParams;
   try {
-    const all = await workspaces();
+    const [all, mine] = await Promise.all([workspaces(), me().catch(() => null)]);
     // Semua gedung dimuat supaya tiap tombol gedung bisa menunjukkan jumlah yang perlu perhatian.
     const offices: Office[] = await Promise.all(all.map(w => loadWorkspace(w.id).then(buildOffice)));
     const current = offices.find(o => o.workspaceSlug === ws || o.workspaceId === ws) ?? offices[0];
@@ -23,7 +23,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ w
     const cur = buildings.find(b => b.id === current.workspaceId)!;
     return (
       <Shell buildings={buildings} current={cur} section="kantor">
-        <OfficeView office={current} buildings={buildings} attention={current.attention} people={current.people} seen={seen} />
+        <OfficeView office={current} buildings={buildings} attention={current.attention} people={current.people} seen={seen} meId={mine?.id ?? null} />
       </Shell>
     );
   } catch (e) {

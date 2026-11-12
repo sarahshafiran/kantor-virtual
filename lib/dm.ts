@@ -11,7 +11,8 @@ export const DM_PREFIX = "💬 Chat";
 // Multica metadata values must be plain text, so the pair is stored as "userA,userB" (sorted).
 
 export type DmMessage = { id: string; mine: boolean; who: string; text: string; when: string; at: string };
-export type DmPerson = { userId: string; name: string; email: string; dmId: string | null; last: { text: string; when: string; mine: boolean } | null; unread: number };
+type Line = { text: string; when: string; mine: boolean };
+export type DmPerson = { userId: string; name: string; email: string; dmId: string | null; last: Line | null; unread: number; hit?: Line | null };
 
 const tz = () => process.env.KANTOR_TIMEZONE || "Asia/Jakarta";
 const when = (iso: string) => {
@@ -44,8 +45,19 @@ async function unreadByIssue(wsId: string) {
   return out;
 }
 
-/** Everyone else in the workspace, with the latest message and unread count of your chat with them. */
-export async function people(wsPick?: string | null) {
+/** A short piece of text around the first match, so the search result shows why it matched. */
+function around(text: string, q: string) {
+  const t = plainText(strip(text)).replace(/\s+/g, " ").trim();
+  const at = t.toLowerCase().indexOf(q);
+  if (at < 0) return null;
+  const from = Math.max(0, at - 30);
+  return (from > 0 ? "…" : "") + t.slice(from, at + q.length + 60) + (at + q.length + 60 < t.length ? "…" : "");
+}
+
+/** Everyone else in the workspace, with the latest message and unread count of your chat with them.
+ *  With a search term, each person also gets the newest message that contains it (`hit`). */
+export async function people(wsPick?: string | null, search?: string | null) {
+  const q = (search ?? "").trim().toLowerCase();
   const ws = await workspace(wsPick);
   const [dir, mine, list, unread] = await Promise.all([loadDirectory(ws.id), me(), chats(ws.id), unreadByIssue(ws.id)]);
   const out: DmPerson[] = [];
@@ -54,12 +66,19 @@ export async function people(wsPick?: string | null) {
     const issue = list.find(i => same((i.metadata ?? {})[DM_KEY], pair))
       ?? list.find(i => !(i.metadata ?? {})[DM_KEY] && (i.title === `${DM_PREFIX} · ${mine.name} & ${m.name}` || i.title === `${DM_PREFIX} · ${m.name} & ${mine.name}`));
     let last: DmPerson["last"] = null;
+    let hit: DmPerson["hit"] = null;
     if (issue) {
       const cs = await comments(ws.id, issue.id);
       const c = cs[cs.length - 1];
       if (c) last = { text: plainText(strip(c.content)).slice(0, 90), when: when(c.created_at), mine: c.author_id === mine.id };
+      if (q) {
+        for (let k = cs.length - 1; k >= 0; k--) {
+          const t = around(cs[k].content, q);
+          if (t) { hit = { text: t, when: when(cs[k].created_at), mine: cs[k].author_id === mine.id }; break; }
+        }
+      }
     }
-    out.push({ userId: m.user_id, name: m.name, email: m.email, dmId: issue?.id ?? null, last, unread: issue ? unread.get(issue.id) ?? 0 : 0 });
+    out.push({ userId: m.user_id, name: m.name, email: m.email, dmId: issue?.id ?? null, last, unread: issue ? unread.get(issue.id) ?? 0 : 0, ...(q ? { hit } : {}) });
   }
   return { me: mine, people: out.sort((a, b) => b.unread - a.unread || Number(!!b.last) - Number(!!a.last) || a.name.localeCompare(b.name)) };
 }
