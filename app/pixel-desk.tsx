@@ -46,11 +46,40 @@ export function lookOf(name: string) {
   return { hair: HAIR[h % HAIR.length], skin: SKIN[(h >> 3) % SKIN.length], shirt: SHIRT[(h >> 6) % SHIRT.length] };
 }
 
+// Your own character (optional, stays on this computer): put frames in public/me/ with a character.json,
+// see public/me.example/README.md. public/me/ is never uploaded to GitHub, so only this laptop shows it.
+type MyChar = { people: string[]; scale?: number; x?: number; y?: number; fps?: number; frames: Record<string, string[]> };
+type Loaded = { cfg: MyChar; img: Record<string, HTMLImageElement[]> };
+let myChar: Promise<Loaded | null> | null = null;
+function loadMyChar() {
+  myChar ??= fetch("/me/character.json", { cache: "no-store" }).then(r => r.ok ? r.json() as Promise<MyChar> : null).then(async cfg => {
+    if (!cfg?.frames?.idle?.length) return null;
+    const img: Record<string, HTMLImageElement[]> = {};
+    await Promise.all(Object.entries(cfg.frames).map(async ([k, list]) => {
+      img[k] = await Promise.all(list.map(src => new Promise<HTMLImageElement>((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = src; })));
+    }));
+    return { cfg, img };
+  }).catch(() => null);
+  return myChar;
+}
+const first = (s: string) => s.toLowerCase().trim().split(/\s+/)[0];
+function useMyChar(name: string, human?: boolean) {
+  const [c, setC] = useState<Loaded | null>(null);
+  useEffect(() => {
+    if (!human) return;
+    let live = true;
+    loadMyChar().then(l => { if (live && l && l.cfg.people.some(p => first(p) === first(name))) setC(l); });
+    return () => { live = false; };
+  }, [name, human]);
+  return c;
+}
+
 export type PixelState = "working" | "ready" | "review" | "failed" | "break" | "away" | "present";
 
 export default function PixelDesk({ name, state, human, papers = 0 }: { name: string; state: PixelState; human?: boolean; papers?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const themeV = useThemeVersion();
+  const mine = useMyChar(name, human);
   useEffect(() => {
     const T = tones();
     const cv = ref.current; if (!cv) return;
@@ -59,12 +88,28 @@ export default function PixelDesk({ name, state, human, papers = 0 }: { name: st
     const look = lookOf(name);
     const r = (x: number, y: number, w: number, h: number, col: string) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
     const seated = state !== "away";
+    const blit = () => { X.imageSmoothingEnabled = false; X.drawImage(lo, 0, 0, W * S, H * S); };
+    // Your own character: idle loop, with a wave every few seconds.
+    const figure = (t: number) => {
+      if (!mine || !seated) return;
+      const { cfg, img } = mine, per = Math.max(1, Math.round(1000 / (cfg.fps ?? 6) / 110));
+      const f = Math.floor(t / per), wave = img.waving?.length ? img.waving : null;
+      const cycle = img.idle.length * 4 + (wave ? wave.length * 2 : 0), k = f % cycle;
+      const list = wave && k >= img.idle.length * 4 ? wave : img.idle;
+      const frame = list === wave ? wave[(k - img.idle.length * 4) % wave.length] : img.idle[k % img.idle.length];
+      const sc = cfg.scale ?? 0.5;
+      X.save(); X.beginPath(); X.rect(0, 0, W * S, 17 * S); X.clip();
+      X.imageSmoothingEnabled = true; X.imageSmoothingQuality = "high";
+      X.drawImage(frame, cfg.x ?? 37, cfg.y ?? -9, frame.width * sc, frame.height * sc);
+      X.restore();
+    };
     const draw = (t: number) => {
       c.clearRect(0, 0, W, H);
       // kursi
       r(22, 8, 13, 10, T.o); r(23, 9, 11, 8, T.chair);
+      if (mine) { X.clearRect(0, 0, cv.width, cv.height); blit(); figure(t); c.clearRect(0, 0, W, H); }
       // tokoh
-      if (seated) {
+      if (seated && !mine) {
         const y = 7 + (state === "working" && Math.floor(t / 4) % 2 ? 1 : 0), x = 24;
         r(x + 1, y, 7, 2, look.hair); r(x + 1, y + 2, 1, 2, look.hair); r(x + 7, y + 2, 1, 2, look.hair);
         r(x + 2, y + 2, 5, 3, look.skin); r(x + 3, y + 3, 1, 1, "#2b2420"); r(x + 6, y + 3, 1, 1, "#2b2420");
@@ -89,12 +134,13 @@ export default function PixelDesk({ name, state, human, papers = 0 }: { name: st
       if (state === "break") { r(36, 15, 4, 3, T.cup); r(40, 16, 1, 1, T.cup); r(37, 12 - (t % 3), 1, 1, "#d3d1c7"); r(38, 13 - ((t + 1) % 3), 1, 1, "#d3d1c7"); }
       if (state === "review") { r(36, 15, 6, 3, T.rev); r(37, 14, 6, 1, T.rev2); }
       for (let i = 0; i < Math.min(papers, 4); i++) { r(24 + i, 16 - i, 7, 2, "#ffffff"); r(30 + i, 16 - i, 1, 1, T.dot); }
-      X.clearRect(0, 0, cv.width, cv.height); X.imageSmoothingEnabled = false; X.drawImage(lo, 0, 0, W * S, H * S);
+      if (!mine) X.clearRect(0, 0, cv.width, cv.height);
+      blit();
     };
     draw(tick);
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches || !["working", "failed", "break"].includes(state);
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches || !(["working", "failed", "break"].includes(state) || (mine && seated));
     if (still) return;
     return subscribe(draw);
-  }, [name, state, human, papers, themeV]);
+  }, [name, state, human, papers, themeV, mine]);
   return <canvas ref={ref} width={W * S} height={H * S} className="pixdesk" aria-hidden="true" />;
 }

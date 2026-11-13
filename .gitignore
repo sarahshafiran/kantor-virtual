@@ -10,3 +10,6 @@ next-env.d.ts
 data/judul.json
 # Personal notes that stay on this computer
 notes/
+
+# Your own office character (frames + character.json); stays on this computer
+public/me/

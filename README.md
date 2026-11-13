@@ -176,3 +176,7 @@ Otherwise it shows when they were last seen.
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+### Your own office character (optional, private)
+Put your animation frames in `public/me/` with a `character.json` (`people`: your name(s); `frames.idle`, optional `frames.waving`: image paths; optional `scale`, `x`, `y`, `fps`).
+That folder is git-ignored, so the character only shows on your own computer; everyone else keeps the default pixel person.
